@@ -157,6 +157,15 @@ ENV/
 env.bak/
 venv.bak/
 
+# ChainGuard local runtime and generated artifacts
+*.db
+*.db-journal
+frontend/dist/
+frontend/*.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
+backend/reports/
+
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -216,3 +225,5 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+frontend/node_modules/

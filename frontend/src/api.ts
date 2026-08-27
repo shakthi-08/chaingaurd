@@ -90,7 +90,12 @@ export type CrossChainMovement = {
   source: string;
 };
 
-const apiBase = import.meta.env.VITE_API_BASE ?? "/api";
+const configuredApiBase = import.meta.env.VITE_API_BASE?.replace(/\/+$/, "");
+const apiBase = configuredApiBase
+  ? configuredApiBase.endsWith("/api")
+    ? configuredApiBase
+    : `${configuredApiBase}/api`
+  : "/api";
 
 export function realtimeUrl(caseId: string): string {
   const configured = import.meta.env.VITE_WS_BASE;

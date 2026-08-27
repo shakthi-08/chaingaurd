@@ -15,7 +15,8 @@ class Settings(BaseSettings):
     ai_base_url: str | None = None
     database_url: str = "sqlite:///./chainguard.db"
     api_prefix: str = "/api"
-    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173,https://chaingaurd.vercel.app,https://chaingaurd-2gxcolh25-darweb.vercel.app"
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173,https://chaingaurd.vercel.app"
+    cors_origin_regex: str = r"^https://chaingaurd-[a-z0-9]+-darweb\.vercel\.app$"
 
     model_config = SettingsConfigDict(
         env_file=".env",

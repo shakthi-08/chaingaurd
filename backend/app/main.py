@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 import json
 
 from app.api.routes import router as case_router
@@ -15,6 +16,14 @@ app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
     description="ChainGuard investigation-intelligence foundation for crypto-fraud attribution workflows.",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(case_router)

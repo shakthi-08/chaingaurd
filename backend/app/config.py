@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     ai_base_url: str | None = None
     database_url: str = "sqlite:///./chainguard.db"
     api_prefix: str = "/api"
+    cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ChainGuard Frontend Technical Documentation</title>
+    <style>
+      :root {
+        --bg: #0b1220;
+        --bg-2: #111827;
+        --panel: #121c2b;
+        --panel-2: #1a2738;
+        --line: #2d3a4d;
+        --text: #e5edf8;
+        --muted: #9fb2c8;
+        --accent: #7dd3fc;
+        --accent-2: #a78bfa;
+        --success: #34d399;
+        --warning: #fbbf24;
+        --danger: #f87171;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Arial, Helvetica, sans-serif;
+        background: linear-gradient(180deg, #0b1220 0%, #111827 100%);
+        color: var(--text);
+        line-height: 1.65;
+      }
+      .page { max-width: 1180px; margin: 0 auto; padding: 36px 24px 90px; }
+      .cover {
+        background: linear-gradient(135deg, rgba(125,211,252,0.12), rgba(167,139,250,0.15));
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 30px 28px;
+        margin-bottom: 28px;
+      }
+      h1, h2, h3, h4 { margin: 0 0 12px; }
+      h1 { font-size: 38px; letter-spacing: 0.04em; }
+      h2 { font-size: 27px; margin-top: 32px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+      h3 { font-size: 20px; margin-top: 18px; }
+      p { margin: 10px 0; }
+      ul, ol { margin: 10px 0 12px 20px; }
+      li { margin-bottom: 6px; }
+      .meta {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 14px;
+        margin-top: 18px;
+      }
+      .meta-item, .card {
+        background: rgba(18, 28, 43, 0.85);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 16px 18px;
+      }
+      .label {
+        color: var(--muted);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .value { font-size: 17px; font-weight: 700; margin-top: 4px; }
+      .toc {
+        background: rgba(18, 28, 43, 0.7);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 18px 20px;
+      }
+      .toc ol { margin: 0 0 0 20px; }
+      .toc li { margin-bottom: 6px; }
+      .diagram {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        flex-wrap: wrap;
+        margin: 18px 0;
+      }
+      .box {
+        min-width: 180px;
+        padding: 16px 18px;
+        text-align: center;
+        border-radius: 12px;
+        border: 1px solid var(--line);
+        background: rgba(18,28,43,0.9);
+      }
+      .box--accent { border-color: rgba(125,211,252,0.45); background: rgba(125,211,252,0.08); }
+      .arrow { color: var(--accent); font-size: 28px; }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 14px;
+      }
+      th, td {
+        border: 1px solid var(--line);
+        text-align: left;
+        padding: 10px 12px;
+        vertical-align: top;
+      }
+      th { background: rgba(26,39,56,0.9); }
+      .status-good { color: var(--success); font-weight: 700; }
+      .status-warn { color: var(--warning); font-weight: 700; }
+      .status-bad { color: var(--danger); font-weight: 700; }
+      code, pre {
+        font-family: Consolas, monospace;
+      }
+      pre {
+        background: rgba(15, 23, 42, 0.95);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 16px;
+        overflow-x: auto;
+        color: #dfeaf7;
+      }
+      .keywords {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .keyword {
+        border: 1px solid rgba(125,211,252,0.4);
+        background: rgba(125,211,252,0.08);
+        color: var(--accent);
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+      @media print {
+        body { background: white; color: #111827; }
+        .cover, .meta-item, .card, .toc, .box { background: white; color: #111827; border-color: #d1d5db; }
+        .keyword { background: #e0f2fe; color: #082f49; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="cover">
+        <h1>ChainGuard</h1>
+        <h2 style="border-bottom:none; margin:0 0 10px; font-size: 30px;">Frontend Technical Documentation</h2>
+        <p>Project version: 0.1.0</p>
+        <p>Date: 2026-09-01</p>
+        <div class="keywords">
+          <span class="keyword">React</span>
+          <span class="keyword">TypeScript</span>
+          <span class="keyword">Vite</span>
+          <span class="keyword">Frontend Architecture</span>
+          <span class="keyword">Blockchain Investigation UI</span>
+          <span class="keyword">API Integration</span>
+          <span class="keyword">Sidebar Navigation</span>
+          <span class="keyword">State-driven UI</span>
+        </div>
+        <div class="meta">
+          <div class="meta-item">
+            <div class="label">Project Type</div>
+            <div class="value">Investigation dashboard frontend</div>
+          </div>
+          <div class="meta-item">
+            <div class="label">Primary Stack</div>
+            <div class="value">React + TypeScript + Vite</div>
+          </div>
+          <div class="meta-item">
+            <div class="label">Routing</div>
+            <div class="value">State-based screen switching</div>
+          </div>
+          <div class="meta-item">
+            <div class="label">Status</div>
+            <div class="value status-good">Frontend is functional and buildable</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="toc">
+        <h3>Table of Contents</h3>
+        <ol>
+          <li><a href="#summary">Executive Summary</a></li>
+          <li><a href="#purpose">Frontend Purpose and Responsibilities</a></li>
+          <li><a href="#stack">Actual Technology Stack</a></li>
+          <li><a href="#architecture">Project Architecture</a></li>
+          <li><a href="#structure">Folder and File Structure</a></li>
+          <li><a href="#entry">Application Entry and Startup Flow</a></li>
+          <li><a href="#routes">Page and Route Architecture</a></li>
+          <li><a href="#sidebar">Sidebar Navigation</a></li>
+          <li><a href="#components">Component Architecture</a></li>
+          <li><a href="#state">State Management</a></li>
+          <li><a href="#dataflow">Data Flow</a></li>
+          <li><a href="#api">API and Backend Integration Readiness</a></li>
+          <li><a href="#demo">Demo, Mock and Placeholder Data</a></li>
+          <li><a href="#errors">Error Handling and Warnings</a></li>
+          <li><a href="#build">Build and Development Process</a></li>
+          <li><a href="#testing">Testing and Verification</a></li>
+          <li><a href="#merge">Backend Integration and Merge Readiness</a></li>
+          <li><a href="#deployment">Deployment Readiness</a></li>
+          <li><a href="#handover">Developer Handover Guide</a></li>
+          <li><a href="#checklist">Backend Integration Checklist</a></li>
+          <li><a href="#status">Final Status</a></li>
+        </ol>
+      </div>
+
+      <h2 id="summary">1. Executive Summary</h2>
+      <p>
+        The ChainGuard frontend is a dashboard-style investigation console designed for blockchain forensic analysis,
+        wallet investigation, fraud detection review, graph exploration, and AI-assisted investigation. The project is built
+        using React and TypeScript with Vite as the build tool. The application is organized as a single-page frontend with a
+        persistent sidebar, top status bar, and dynamically rendered content panels for investigation actions.
+      </p>
+      <p>
+        The current implementation follows a state-driven UI model rather than a React Router route system. The root application
+        component holds the current screen state, and the visible content changes depending on the current navigation state.
+        The frontend exposes a dedicated API layer under <code>src/api.ts</code> to integrate with backend services for case
+        data, transaction details, risk assessments, paths, attribution, and AI interpretation endpoints.
+      </p>
+      <p>
+        The project structure is intentionally modular and easy to extend. It separates the layout shell, reusable visual
+        primitives, screen components, and API integration layer. This makes it suitable for a backend team to integrate real
+        endpoints without a complete frontend rewrite.
+      </p>
+
+      <h2 id="purpose">2. Frontend Purpose and Responsibilities</h2>
+      <p>The frontend is responsible for:</p>
+      <ul>
+        <li>Rendering the investigation dashboard shell and navigation.</li>
+        <li>Displaying case metadata such as wallet IDs, risk status, and investigation context.</li>
+        <li>Rendering investigation screens: overview, new case, transactions, risk, attribution, AI interpretation, timeline, graph, and report.</li>
+        <li>Managing UI state for screen selection, tab navigation, and side-panel visibility.</li>
+        <li>Calling backend API endpoints through a dedicated service abstraction.</li>
+        <li>Handling loading and error states for data fetching.</li>
+        <li>Preparing the UI for real backend data without hard-wired business logic.</li>
+      </ul>
+      <p>
+        The frontend is not a complete backend implementation; it is a presentation and orchestration layer that expects the backend
+        to provide real investigation data through the API contract defined in <code>src/api.ts</code>.
+      </p>
+
+      <h2 id="stack">3. Actual Technology Stack</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Area</th>
+            <th>Actual technology</th>
+            <th>Purpose</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Framework</td>
+            <td>React</td>
+            <td>UI rendering and component structure</td>
+          </tr>
+          <tr>
+            <td>Language</td>
+            <td>TypeScript</td>
+            <td>Typed frontend code</td>
+          </tr>
+          <tr>
+            <td>Build tool</td>
+            <td>Vite</td>
+            <td>Development server and production build</td>
+          </tr>
+          <tr>
+            <td>Routing</td>
+            <td>None (state-based navigation)</td>
+            <td>Screen changes are controlled by React state, not React Router</td>
+          </tr>
+          <tr>
+            <td>Styling</td>
+            <td>CSS files and theme variables</td>
+            <td>Layout, spacing, typography, visual theming</td>
+          </tr>
+          <tr>
+            <td>Icons</td>
+            <td>lucide-react</td>
+            <td>Sidebar and control icons</td>
+          </tr>
+          <tr>
+            <td>Graph library</td>
+            <td>reactflow</td>
+            <td>Investigation graph visualization</td>
+          </tr>
+          <tr>
+            <td>State management</td>
+            <td>React hooks (useState, useEffect, useMemo)</td>
+            <td>App state and component-local state</td>
+          </tr>
+          <tr>
+            <td>Testing</td>
+            <td>Vitest + jsdom</td>
+            <td>Unit testing support</td>
+          </tr>
+          <tr>
+            <td>Runtime environment</td>
+            <td>Browser + Vite dev server</td>
+            <td>UI execution in the browser</td>
+          </tr>
+        </tbody>
+      </table>
+      <p><strong>Important:</strong> There is no React Router dependency in the current project, and no Redux/Zustand/Context provider-based global store is defined in the frontend source.</p>
+
+      <h2 id="architecture">4. Complete Project Architecture</h2>
+      <div class="diagram">
+        <div class="box box--accent">User</div>
+        <div class="arrow">→</div>
+        <div class="box">App Shell</div>
+        <div class="arrow">→</div>
+        <div class="box">Sidebar / Top Bar</div>
+        <div class="arrow">→</div>
+        <div class="box">Screen / Workspace</div>
+        <div class="arrow">→</div>
+        <div class="box">State + API</div>
+      </div>
+      <p>
+        The frontend is structured around a root app shell that owns the primary navigation state and orchestrates screen rendering.
+        It is not nested route-based. Instead, it uses the current screen value stored in React state to decide which component to render.
+      </p>
+      <p>
+        Application responsibilities are intentionally split into layers:
+      </p>
+      <ul>
+        <li>Shell layer: layout, sidebar, top bar</li>
+        <li>Component layer: reusable controls and visual building blocks</li>
+        <li>Screen layer: overview, investigation workspace, new investigation, transactions, attribution, etc.</li>
+        <li>Service layer: typed API calls in src/api.ts</li>
+      </ul>
+
+      <h2 id="structure">5. Actual Folder and File Structure</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Path</th>
+            <th>Role</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>src/App.tsx</td>
+            <td>Primary application state, navigation control, screen selection, data loading, and main rendering tree.</td>
+          </tr>
+          <tr>
+            <td>src/main.tsx</td>
+            <td>Bootstraps the React app and wraps it with ReactFlowProvider.</td>
+          </tr>
+          <tr>
+            <td>src/api.ts</td>
+            <td>Defines the API contract and fetch logic for backend calls and WebSocket URL generation.</td>
+          </tr>
+          <tr>
+            <td>src/components/Layout.tsx</td>
+            <td>Sidebar, top bar, and main layout shell.</td>
+          </tr>
+          <tr>
+            <td>src/components/InvestigationWorkspace.tsx</td>
+            <td>Tabbed investigation workspace and detailed section switching.</td>
+          </tr>
+          <tr>
+            <td>src/components/BaseComponents.tsx</td>
+            <td>Reusable UI primitives such as buttons, cards, badges, drawers, and AI panels.</td>
+          </tr>
+          <tr>
+            <td>src/screens/Overview.tsx</td>
+            <td>Overview dashboard behavior and metrics summary.</td>
+          </tr>
+          <tr>
+            <td>src/screens/NewInvestigation.tsx</td>
+            <td>Wallet/intake form for starting a new investigation.</td>
+          </tr>
+          <tr>
+            <td>src/screens/Transactions.tsx</td>
+            <td>Transaction evidence table and transaction detail drawer.</td>
+          </tr>
+          <tr>
+            <td>src/screens/RiskAndFraud.tsx</td>
+            <td>Risk and fraud indicator summary screen.</td>
+          </tr>
+          <tr>
+            <td>src/screens/Attribution.tsx</td>
+            <td>Entity attribution display.</td>
+          </tr>
+          <tr>
+            <td>src/screens/AIInvestigation.tsx</td>
+            <td>AI interpretation section with findings and evidence references.</td>
+          </tr>
+          <tr>
+            <td>src/screens/FundFlow.tsx</td>
+            <td>Flow and path analysis screen.</td>
+          </tr>
+          <tr>
+            <td>src/screens/InvestigationGraph.tsx</td>
+            <td>Graph visualization of investigation network.</td>
+          </tr>
+          <tr>
+            <td>src/screens/InvestigationReport.tsx</td>
+            <td>Investigation report section.</td>
+          </tr>
+          <tr>
+            <td>src/styles/theme.css</td>
+            <td>Core visual tokens and theme definitions.</td>
+          </tr>
+          <tr>
+            <td>index.html</td>
+            <td>Application entry HTML document.</td>
+          </tr>
+          <tr>
+            <td>vite.config.ts</td>
+            <td>Vite configuration.</td>
+          </tr>
+          <tr>
+            <td>tsconfig.*.json</td>
+            <td>TypeScript configuration.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 id="entry">6. Application Entry Point and Startup Flow</h2>
+      <p>The startup flow is simple and follows the standard Vite/React pattern.</p>
+      <ol>
+        <li><code>src/main.tsx</code> creates the root React application.</li>
+        <li>It wraps the app in <code>ReactFlowProvider</code> from <code>reactflow</code> so graph features can render correctly.</li>
+        <li><code>App</code> is mounted and rendered by React.</li>
+        <li><code>App</code> initializes states such as current screen, transactions, graph data, risk data, and WebSocket status.</li>
+        <li>A useEffect hook triggers data loading on initial mount in <code>App.tsx</code>.</li>
+        <li>Backend data is fetched through the service layer defined in <code>src/api.ts</code>.</li>
+        <li>Content is rendered according to the current screen state.</li>
+      </ol>
+      <pre>Entry point: src/main.tsx
+App bootstrap: ReactDOM.createRoot(...).render(&lt;App /&gt;)</pre>
+
+      <h2 id="routes">7. Page and Route Architecture</h2>
+      <p>The project does not use a router package or route definitions. The current navigation architecture is a screen state model.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>Screen state</th>
+            <th>Component rendered</th>
+            <th>Purpose</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>overview</td>
+            <td>Overview</td>
+            <td>Main dashboard overview</td>
+          </tr>
+          <tr>
+            <td>new-investigation</td>
+            <td>NewInvestigation</td>
+            <td>Wallet intake / new case form</td>
+          </tr>
+          <tr>
+            <td>workspace</td>
+            <td>InvestigationWorkspace</td>
+            <td>Investigation workspace with tabs</td>
+          </tr>
+          <tr>
+            <td>transactions</td>
+            <td>InvestigationWorkspace</td>
+            <td>Workspace tab for transaction evidence</td>
+          </tr>
+          <tr>
+            <td>fund-flow</td>
+            <td>InvestigationWorkspace</td>
+            <td>Workspace tab for path analysis</td>
+          </tr>
+          <tr>
+            <td>graph</td>
+            <td>InvestigationWorkspace</td>
+            <td>Workspace tab for graph visualization</td>
+          </tr>
+          <tr>
+            <td>risk</td>
+            <td>InvestigationWorkspace</td>
+            <td>Workspace tab for risk and fraud</td>
+          </tr>
+          <tr>
+            <td>attribution</td>
+            <td>InvestigationWorkspace</td>
+            <td>Workspace tab for attribution matches</td>
+          </tr>
+          <tr>
+            <td>ai</td>
+            <td>InvestigationWorkspace</td>
+            <td>Workspace tab for AI findings</td>
+          </tr>
+          <tr>
+            <td>timeline</td>
+            <td>InvestigationWorkspace</td>
+            <td>Workspace tab for chronology</td>
+          </tr>
+          <tr>
+            <td>report</td>
+            <td>InvestigationWorkspace</td>
+            <td>Workspace tab for report content</td>
+          </tr>
+        </tbody>
+      </table>
+      <p><strong>Actual note:</strong> There is no route configuration file, no route path constants, and no React Router usage in the current source.</p>
+
+      <h2 id="sidebar">8. Sidebar Navigation</h2>
+      <p>The sidebar is defined in <code>src/components/Layout.tsx</code> as a static array called <code>NAV_ITEMS</code>.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Item</th>
+            <th>Current implementation</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1</td>
+            <td>Overview</td>
+            <td>State-based menu item mapped to <code>overview</code></td>
+            <td>Primary dashboard screen</td>
+          </tr>
+          <tr>
+            <td>2</td>
+            <td>New Investigation</td>
+            <td>State-based menu item mapped to <code>new-investigation</code></td>
+            <td>Form-driven intake screen</td>
+          </tr>
+          <tr>
+            <td>3</td>
+            <td>Investigations</td>
+            <td>Menu item in <code>NAV_ITEMS</code> with id <code>investigations</code></td>
+            <td>It is present as a sidebar button and rendered as a generic investigation entry. There is no distinct React Router path or dedicated screen component for it in the current source; the app uses screen state rather than separate route files.</td>
+          </tr>
+          <tr>
+            <td>4</td>
+            <td>Transactions</td>
+            <td>State-based menu item mapped to <code>transactions</code></td>
+            <td>Canvas/workspace section</td>
+          </tr>
+          <tr>
+            <td>5</td>
+            <td>Fund Flow</td>
+            <td>State-based menu item mapped to <code>fund-flow</code></td>
+            <td>Risk/flow analysis screen</td>
+          </tr>
+          <tr>
+            <td>6</td>
+            <td>Investigation Graph</td>
+            <td>State-based menu item mapped to <code>graph</code></td>
+            <td>network graph view</td>
+          </tr>
+          <tr>
+            <td>7</td>
+            <td>Risk & Fraud</td>
+            <td>State-based menu item mapped to <code>risk</code></td>
+            <td>Risk analysis section</td>
+          </tr>
+          <tr>
+            <td>8</td>
+            <td>Attribution</td>
+            <td>State-based menu item mapped to <code>attribution</code></td>
+            <td>Entity identification section</td>
+          </tr>
+          <tr>
+            <td>9</td>
+            <td>AI Investigation</td>
+            <td>State-based menu item mapped to <code>ai</code></td>
+            <td>AI interpretation section</td>
+          </tr>
+          <tr>
+            <td>10</td>
+            <td>Timeline</td>
+            <td>State-based menu item mapped to <code>timeline</code></td>
+            <td>Investigation timeline panel</td>
+          </tr>
+          <tr>
+            <td>11</td>
+            <td>Investigation Report</td>
+            <td>State-based menu item mapped to <code>report</code></td>
+            <td>Report panel</td>
+          </tr>
+          <tr>
+            <td>12</td>
+            <td>System Status</td>
+            <td>Disabled item with <code>disabled: true</code></td>
+            <td>Shown in the UI but not active for the current integration state</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        The sidebar is implemented using button elements. Each button calls <code>onNavChange(item.id)</code> when enabled. The active state
+        is determined by comparing the current app state to the item id. This is all implemented in the layout component and not in a URL router.
+      </p>
+
+      <h2 id="components">9. Component Architecture</h2>
+      <p>The project uses a clear component hierarchy around a reusable design system.</p>
+      <ul>
+        <li><strong>Layout shell</strong>: sidebar, top bar, and main region.</li>
+        <li><strong>Reusable components</strong>: buttons, cards, badges, metric cards, risk display, drawers, evidence cards, AI panel.</li>
+        <li><strong>Screen-level components</strong>: Overview, NewInvestigation, Transactions, RiskAndFraud, Attribution, AIInvestigation, Timeline, FundFlow, InvestigationGraph, InvestigationReport.</li>
+        <li><strong>Workspace component</strong>: sets the active sub-tab and renders the correct screen content for the investigation workspace.</li>
+      </ul>
+      <p>Reusable UI primitives are located in <code>src/components/BaseComponents.tsx</code> and are imported by the screen components.</p>
+
+      <h2 id="state">10. State Management</h2>
+      <p>The app relies on local React state, not a global store.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>State</th>
+            <th>Location</th>
+            <th>Purpose</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>currentScreen</td>
+            <td>App.tsx</td>
+            <td>Active main screen</td>
+          </tr>
+          <tr>
+            <td>sidebarCollapsed</td>
+            <td>App.tsx</td>
+            <td>Sidebar expansion state</td>
+          </tr>
+          <tr>
+            <td>transactions</td>
+            <td>App.tsx</td>
+            <td>Transaction list from backend</td>
+          </tr>
+          <tr>
+            <td>graph</td>
+            <td>App.tsx</td>
+            <td>Network graph data</td>
+          </tr>
+          <tr>
+            <td>paths</td>
+            <td>App.tsx</td>
+            <td>Fund flow paths</td>
+          </tr>
+          <tr>
+            <td>risk</td>
+            <td>App.tsx</td>
+            <td>Risk assessment</td>
+          </tr>
+          <tr>
+            <td>attributions</td>
+            <td>App.tsx</td>
+            <td>Entity attribution data</td>
+          </tr>
+          <tr>
+            <td>aiResponse</td>
+            <td>App.tsx</td>
+            <td>AI summary/analysis answer</td>
+          </tr>
+          <tr>
+            <td>loading</td>
+            <td>App.tsx</td>
+            <td>API loading state</td>
+          </tr>
+          <tr>
+            <td>error</td>
+            <td>App.tsx</td>
+            <td>Frontend error state</td>
+          </tr>
+          <tr>
+            <td>realtimeStatus</td>
+            <td>App.tsx</td>
+            <td>WebSocket connectivity status</td>
+          </tr>
+          <tr>
+            <td>activeTab</td>
+            <td>InvestigationWorkspace.tsx</td>
+            <td>Selected investigation tab</td>
+          </tr>
+          <tr>
+            <td>caseSummaryOpen</td>
+            <td>InvestigationWorkspace.tsx</td>
+            <td>Case summary side panel open state</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>There is no app-wide Context API or Redux store defined in the current project.</p>
+
+      <h2 id="dataflow">11. Data Flow</h2>
+      <p>The application follows the following flow:</p>
+      <pre>User → UI interaction → React state update → component render → API/service call → backend response → state update → component re-render</pre>
+      <ul>
+        <li>User clicks navigation item or tab.</li>
+        <li>Current state is updated through React hook setters.</li>
+        <li>Component rendering changes based on this state.</li>
+        <li>When data is needed, <code>App.tsx</code> calls the methods in <code>src/api.ts</code>.</li>
+        <li>The service layer uses <code>fetch</code> and constructs endpoint URLs from the configured base URL.</li>
+        <li>Server responses are mapped into typed structures such as <code>Transaction</code>, <code>Graph</code>, <code>RiskAssessment</code>, and <code>Attribution</code>.</li>
+        <li>UI screens display these values through screen components and base components.</li>
+      </ul>
+
+      <h2 id="api">12. API and Backend Integration Readiness</h2>
+      <p>The frontend currently has a dedicated service layer in <code>src/api.ts</code>. This is the main backend integration contract for the UI.</p>
+      <table>
+        <thead>
+          <tr>
+            <th>API area</th>
+            <th>Actual method</th>
+            <th>Expected backend purpose</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Health</td>
+            <td>api.health()</td>
+            <td>Service availability check</td>
+          </tr>
+          <tr>
+            <td>Transactions</td>
+            <td>api.transactions(caseId)</td>
+            <td>List of transactions for a case</td>
+          </tr>
+          <tr>
+            <td>Graph</td>
+            <td>api.graph(caseId)</td>
+            <td>Node and edge graph data</td>
+          </tr>
+          <tr>
+            <td>Paths</td>
+            <td>api.paths(caseId, wallet)</td>
+            <td>Fund flow path data</td>
+          </tr>
+          <tr>
+            <td>Attribution</td>
+            <td>api.attributions(caseId)</td>
+            <td>Entity attribution results</td>
+          </tr>
+          <tr>
+            <td>Risk</td>
+            <td>api.risk(caseId)</td>
+            <td>Risk score and indicators</td>
+          </tr>
+          <tr>
+            <td>AI summary</td>
+            <td>api.ai.summary(caseId)</td>
+            <td>AI interpretation summary</td>
+          </tr>
+          <tr>
+            <td>AI path explanation</td>
+            <td>api.ai.path(caseId, pathRank)</td>
+            <td>AI explanation of a path</td>
+          </tr>
+          <tr>
+            <td>AI risk explanation</td>
+            <td>api.ai.risk(caseId)</td>
+            <td>Risk explanation from AI</td>
+          </tr>
+          <tr>
+            <td>AI attribution explanation</td>
+            <td>api.ai.attribution(caseId, wallet)</td>
+            <td>AI understanding of attribution</td>
+          </tr>
+          <tr>
+            <td>AI next steps</td>
+            <td>api.ai.nextSteps(caseId)</td>
+            <td>Recommended actions summary</td>
+          </tr>
+          <tr>
+            <td>WebSocket</td>
+            <td>realtimeUrl(caseId)</td>
+            <td>Live updates for new transactions/events</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>Environment variables used in the project are:</p>
+      <pre>VITE_API_BASE
+VITE_WS_BASE
+VITE_CASE_ID
+VITE_WALLET_ADDRESS</pre>
+      <p>These variables are read from the environment and used to configure the backend API base URL and WebSocket URL generation. The app also uses a fallback default of <code>/api</code> for REST calls.</p>
+      <p>Authentication integration points are not implemented in the current project source. There is no token or auth interceptor in the frontend service layer. Any future auth implementation would need to be introduced in the same API layer without restructuring the screens.</p>
+      <p>CORS readiness depends on backend configuration. The frontend performs browser fetches to the configured API base and generates WebSocket URLs. The backend must allow the frontend origin for cross-origin requests if the app is served from a different domain or port.</p>
+
+      <h2 id="demo">13. Demo, Mock and Placeholder Data</h2>
+      <p>There is no embedded demo dataset in the current primary app state flow. The project is intended to pull real backend data through the service layer.</p>
+      <p>However, some UI states still include generic placeholders or fallback wording, such as:</p>
+      <ul>
+        <li>"AI analysis not yet available. Processing investigation data..." in <code>AIInvestigation</code></li>
+        <li>"This section is under development." in the default workspace switch case</li>
+        <li>Empty-ui fallbacks such as "No Active Investigation" displayed when no case data is present</li>
+      </ul>
+      <p>These are not backend mock models; they are UI fallbacks for empty or unavailable data. The primary data source is expected to be the real backend API service layer.</p>
+
+      <h2 id="errors">14. Error Handling</h2>
+      <p>The project includes basic frontend error handling patterns:</p>
+      <ul>
+        <li>API errors are caught in <code>App.tsx</code> and stored in a local <code>error</code> state.</li>
+        <li>Loading state prevents repeated actions during fetches.</li>
+        <li>WebSocket failures set the realtime status to disconnected.</li>
+        <li>Network data failures are handled gracefully and leave the UI in a neutral/loading-ready state.</li>
+      </ul>
+      <p>Relevant warnings and runtime issues previously encountered in this project were tied to missing imports, stale app navigation state, and missing app-level sync between sidebar state and workspace content. Those issues were addressed in the app logic by restoring the required React imports and aligning the state-driven navigation flow.</p>
+      <p>There is no global error boundary in the current application; this is a future improvement if the project grows beyond the current dashboard scope.</p>
+
+      <h2 id="build">15. Build and Development Process</h2>
+      <p>The project uses a standard Vite-based frontend setup.</p>
+      <pre>npm install
+npm run dev
+npm run build
+npm run test</pre>
+      <p>Current package scripts:</p>
+      <pre>
+{
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "test": "vitest run"
+  }
+}</pre>
+      <p>There is no <code>npm run lint</code> script defined in the current project. The project uses TypeScript compilation as part of the build step, and Vitest for automated tests.</p>
+
+      <h2 id="testing">16. Testing and Verification</h2>
+      <p>What can be verified from the project setup:</p>
+      <ul>
+        <li><strong>npm install</strong>: installs dependencies from package.json</li>
+        <li><strong>npm run dev</strong>: starts the Vite local frontend server</li>
+        <li><strong>npm run build</strong>: compiles TypeScript and produces a production build</li>
+        <li><strong>npm run test</strong>: runs the active Vitest suite</li>
+        <li><strong>npm run lint</strong>: not currently configured</li>
+      </ul>
+      <p>The project has TypeScript configuration files and the build command includes <code>tsc -b</code>, so TypeScript checks are enforced during build.</p>
+
+      <h2 id="merge">17. Backend Integration and Git Merge Readiness</h2>
+      <p>The frontend is already organized to accept a separately developed backend with minimal disruption.</p>
+      <ul>
+        <li>All API calls are centralized in <code>src/api.ts</code>.</li>
+        <li>UI screens consume typed model objects instead of inlined data fetch logic.</li>
+        <li>Data objects are modeled explicitly in TypeScript interfaces.</li>
+        <li>Environment variables isolate backend host and WS configuration.</li>
+        <li>There is no backend logic embedded in screen components.</li>
+      </ul>
+      <p>This means a backend team can connect the actual endpoints with minimal frontend code changes, as long as the response shapes match the existing TypeScript definitions.</p>
+      <p>It is important not to restructure the frontend unnecessarily; the app currently demonstrates a straightforward separation of concerns and is suitable for a merge-oriented workflow.</p>
+
+      <h2 id="deployment">18. Deployment Readiness</h2>
+      <p>The frontend is deployable as a standard Vite static client application.</p>
+      <ul>
+        <li>Build output is generated under the <code>dist</code> folder.</li>
+        <li>Environment variables should be configured during deployment.</li>
+        <li>API host and WebSocket base must be set according to the target backend environment.</li>
+        <li>The app is ready for deployment to a web server that can serve the built static assets and route requests to the backend API.</li>
+      </ul>
+      <p>It is not a server-side rendered application and does not require a database or backend runtime on the frontend itself.</p>
+
+      <h2 id="handover">19. Developer Handover Guide</h2>
+      <p>For another developer joining the project:</p>
+      <ol>
+        <li>Start with <code>src/App.tsx</code> to understand the navigation and app-state flow.</li>
+        <li>Review <code>src/api.ts</code> to see backend contracts and environment variables.</li>
+        <li>Read <code>src/components/Layout.tsx</code> for the main navigation shell.</li>
+        <li>Review <code>src/components/InvestigationWorkspace.tsx</code> for workspace tabs and investigation rendering logic.</li>
+        <li>Check screen components in <code>src/screens</code> to see what each page is expected to display.</li>
+        <li>Use <code>src/styles/theme.css</code> for design tokens and visual consistency.</li>
+        <li>When integrating backend data, keep the service layer as the single integration boundary.</li>
+      </ol>
+
+      <h2 id="checklist">20. Backend Integration Checklist</h2>
+      <ul>
+        <li>Define backend endpoints for transactions, graph, paths, risk, attribution, and AI summary.</li>
+        <li>Confirm response shapes match the TypeScript models in <code>src/api.ts</code>.</li>
+        <li>Set the environment variables for the API base and websocket address.</li>
+        <li>Ensure CORS is configured for the frontend origin.</li>
+        <li>Integrate a real case id and wallet address source.</li>
+        <li>Update UI states for loading and empty data where needed.</li>
+        <li>Verify real-time event payload compatibility with the existing WebSocket handling code.</li>
+        <li>Keep any future auth implementation inside the API service layer.</li>
+      </ul>
+
+      <h2 id="status">21. Final Status</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Area</th>
+            <th>Status</th>
+            <th>Comment</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Frontend architecture</td>
+            <td class="status-good">Complete</td>
+            <td>Clear, modular structure is present</td>
+          </tr>
+          <tr>
+            <td>API layer</td>
+            <td class="status-good">Ready</td>
+            <td>Typed and centralized</td>
+          </tr>
+          <tr>
+            <td>Core screens</td>
+            <td class="status-good">Implemented</td>
+            <td>Overview, workspace, transactions, risk, AI, graph, etc.</td>
+          </tr>
+          <tr>
+            <td>Routing</td>
+            <td class="status-warn">State-driven</td>
+            <td>No React Router or URL path configuration is used</td>
+          </tr>
+          <tr>
+            <td>Backend integration</td>
+            <td class="status-warn">Pending real backend data</td>
+            <td>Frontend is set for integration but requires actual endpoint values</td>
+          </tr>
+          <tr>
+            <td>Auth</td>
+            <td class="status-warn">Not currently implemented</td>
+            <td>Not found in the current frontend source</td>
+          </tr>
+          <tr>
+            <td>Demo/mock content</td>
+            <td class="status-good">Minimal / not embedded in primary data flow</td>
+            <td>Fallback placeholders remain in UI only</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        The current frontend is structurally solid, buildable, and ready for actual backend integration. The main requirement is to
+        connect the existing API layer to a real service and validate the response payloads against the existing TypeScript models.
+        The application should not be rewritten just for integration; the existing architecture is already appropriate for a clean merge.
+      </p>
+    </div>
+  </body>
+</html>

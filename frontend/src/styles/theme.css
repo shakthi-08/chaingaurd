@@ -1,0 +1,167 @@
+/* ChainGuard Theme - Based on UI/UX Specification */
+
+:root {
+  /* Background & Surfaces */
+  --bg-base: #0b0e14;
+  --bg-canvas: #0e1219;
+  --surface-1: #141922;
+  --surface-2: #1a212c;
+  --surface-3: #212938;
+  --border-subtle: #26303f;
+  --border-strong: #37455a;
+
+  /* Text */
+  --text-primary: #e7ecf3;
+  --text-secondary: #9aa7bd;
+  --text-tertiary: #657186;
+  --text-inverse: #0b0e14;
+
+  /* Primary / Interactive */
+  --accent-primary: #3e8fff;
+  --accent-primary-hover: #5c9fff;
+  --accent-primary-muted: #1b3a63;
+  --accent-cyan: #2fd0c9;
+
+  /* Semantic Colors */
+  --success: #3dd68c;
+  --success-bg: #0f2b22;
+  --warning: #f0b429;
+  --warning-bg: #332708;
+  --danger: #f0473e;
+  --danger-bg: #331313;
+  --neutral-risk: #657186;
+
+  /* Spacing (4px base) */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 20px;
+  --spacing-2xl: 24px;
+  --spacing-3xl: 32px;
+  --spacing-4xl: 40px;
+  --spacing-5xl: 48px;
+
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Typography */
+h1 {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 0;
+}
+
+h2 {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin: 0;
+}
+
+h3 {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0.01em;
+  margin: 0;
+}
+
+/* Monospace for identifiers */
+.monospace {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+/* Base components */
+button {
+  font-family: inherit;
+  font-size: inherit;
+  cursor: pointer;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 8px 16px;
+  height: 32px;
+  transition: all 150ms ease-in-out;
+}
+
+button:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  background-color: var(--surface-2);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  transition: all 150ms ease-in-out;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 2px var(--accent-primary-muted);
+}
+
+input::placeholder {
+  color: var(--text-tertiary);
+}
+
+/* Remove default focus styles and use custom */
+:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface-1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+  opacity: 0.8;
+}

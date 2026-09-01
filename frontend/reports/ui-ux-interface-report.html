@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ChainGuard UI/UX Interface Report</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --panel: #111827;
+        --soft: #1f2937;
+        --line: #334155;
+        --text: #e5e7eb;
+        --muted: #94a3b8;
+        --accent: #7dd3fc;
+        --accent2: #a78bfa;
+        --success: #34d399;
+        --warning: #fbbf24;
+        --danger: #f87171;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Arial, Helvetica, sans-serif;
+        background: linear-gradient(180deg, #0b1220, #111827);
+        color: var(--text);
+        line-height: 1.6;
+      }
+      .page { max-width: 1100px; margin: 0 auto; padding: 36px 24px 80px; }
+      .header {
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 28px 24px;
+        background: linear-gradient(135deg, rgba(125,211,252,0.1), rgba(167,139,250,0.18));
+        margin-bottom: 22px;
+      }
+      h1, h2, h3 { margin: 0 0 12px; }
+      h1 { font-size: 34px; }
+      h2 { font-size: 26px; margin-top: 28px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+      h3 { font-size: 20px; margin-top: 18px; }
+      .keywords { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+      .keyword {
+        background: rgba(125,211,252,0.12);
+        border: 1px solid rgba(125,211,252,0.35);
+        border-radius: 999px; color: var(--accent); padding: 6px 10px; font-size: 12px;
+      }
+      .grid {
+        display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-top: 18px;
+      }
+      .card {
+        background: rgba(17,24,39,0.92);
+        border: 1px solid var(--line); border-radius: 12px; padding: 18px;
+      }
+      .label {
+        color: var(--muted); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 8px;
+      }
+      ul { margin: 10px 0 12px 22px; }
+      li { margin-bottom: 6px; }
+      .swatch-row { display:flex; gap:12px; flex-wrap:wrap; margin-top:12px; }
+      .swatch {
+        width: 72px; height: 72px; border-radius: 12px; border: 1px solid var(--line); display:flex; align-items:flex-end; justify-content:center; padding:8px; font-size:11px; font-weight:700;
+      }
+      .dark { background:#0f172a; color:#e5e7eb; }
+      .panel { background:#111827; color:#e5e7eb; }
+      .muted { background:#1f2937; color:#e5e7eb; }
+      .accent { background:#7dd3fc; color:#082f49; }
+      .purple { background:#a78bfa; color:#1f163a; }
+      .success { background:#34d399; color:#052e16; }
+      .warning { background:#fbbf24; color:#451a03; }
+      .danger { background:#f87171; color:#450a0a; }
+      @media print {
+        body { background: white; color:#111827; }
+        .card, .header { background:white; border-color:#d1d5db; color:#111827; }
+        .keyword { background:#e0f2fe; color:#082f49; }
+        .swatch { border-color:#d1d5db; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="header">
+        <h1>ChainGuard UI/UX Interface Report</h1>
+        <p>Interface analysis focused on design language, navigation, usability, layout structure, visual hierarchy, and user experience patterns used in the project.</p>
+        <div class="keywords">
+          <span class="keyword">Dark Mode</span>
+          <span class="keyword">Security Console</span>
+          <span class="keyword">Sidebar Navigation</span>
+          <span class="keyword">Dashboard</span>
+          <span class="keyword">Risk Visualization</span>
+          <span class="keyword">Operational UI</span>
+          <span class="keyword">Card Layout</span>
+          <span class="keyword">Case Management</span>
+          <span class="keyword">UX System</span>
+        </div>
+      </div>
+
+      <h2>1. UI Style Overview</h2>
+      <div class="grid">
+        <div class="card">
+          <div class="label">Design Language</div>
+          <p>Dark-themed security dashboard with high contrast and a command-center appearance.</p>
+        </div>
+        <div class="card">
+          <div class="label">Target User</div>
+          <p>Investigators, risk analysts, and operations teams monitoring blockchain security events.</p>
+        </div>
+        <div class="card">
+          <div class="label">Visual Personality</div>
+          <p>Professional, technical, serious, data-heavy, and operationally focused.</p>
+        </div>
+      </div>
+
+      <h2>2. Layout Structure</h2>
+      <ul>
+        <li>Full-height application shell with left navigation column and main work area.</li>
+        <li>Persistent top bar for status and case metadata.</li>
+        <li>Side panel summary available inside workspace views for deeper investigation context.</li>
+        <li>Cards and modular sections organize metrics, data summaries, and actions clearly.</li>
+        <li>Primary content area emphasizes investigation data without cluttering the viewport.</li>
+      </ul>
+
+      <h2>3. Navigation System</h2>
+      <ul>
+        <li>Left sidebar acts as the primary navigation control.</li>
+        <li>Navigation items are icon + label combinations for quick recognition.</li>
+        <li>Active state is differentiated with a tinted background and left border accent.</li>
+        <li>Disabled items are visually reduced to indicate unavailable or restricted actions.</li>
+        <li>Workspace tabs provide secondary navigation inside investigation content.</li>
+      </ul>
+
+      <h2>4. Interface Components Used</h2>
+      <div class="grid">
+        <div class="card">
+          <div class="label">Core Components</div>
+          <ul>
+            <li>Sidebar navigation</li>
+            <li>Top bar</li>
+            <li>Case summary panel</li>
+            <li>Overview cards</li>
+            <li>Risk badge components</li>
+            <li>Action buttons</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="label">Data Visualization Interface</div>
+          <ul>
+            <li>Network graph panels</li>
+            <li>Risk overview cards</li>
+            <li>Transaction tables</li>
+            <li>Metric summary cards</li>
+            <li>Timeline entries</li>
+            <li>AI output blocks</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="label">Interaction Patterns</div>
+          <ul>
+            <li>Click-based navigation</li>
+            <li>Tab switching</li>
+            <li>Status toggles</li>
+            <li>Action buttons</li>
+            <li>Empty states</li>
+            <li>Case summary collapsibles</li>
+          </ul>
+        </div>
+      </div>
+
+      <h2>5. Visual Design Tokens</h2>
+      <div class="swatch-row">
+        <div class="swatch dark">Dark</div>
+        <div class="swatch panel">Panel</div>
+        <div class="swatch muted">Muted</div>
+        <div class="swatch accent">Accent</div>
+        <div class="swatch purple">Purple</div>
+        <div class="swatch success">Success</div>
+        <div class="swatch warning">Warn</div>
+        <div class="swatch danger">Danger</div>
+      </div>
+
+      <h2>6. Color and Emotion</h2>
+      <ul>
+        <li>Dark navy foundation communicates monitoring and security operations.</li>
+        <li>Bright accent cyan enhances focus and action emphasis.</li>
+        <li>Warning and danger colors clearly indicate risk severity.</li>
+        <li>Muted tones support secondary labels and metadata.</li>
+        <li>The palette prioritizes readability and alert-driven scanning.</li>
+      </ul>
+
+      <h2>7. Typography and Readability</h2>
+      <ul>
+        <li>Clear sans-serif typography for operational clarity.</li>
+        <li>Strong labels and concise metadata blocks.</li>
+        <li>Monospace styling is used for wallet addresses, case IDs, and technical values.</li>
+        <li>Headings are compact but legible to support scanning by analysts.</li>
+      </ul>
+
+      <h2>8. UX Principles Applied</h2>
+      <ul>
+        <li>Clarity over decoration</li>
+        <li>Fast recognition of navigation targets</li>
+        <li>Immediate status awareness</li>
+        <li>Risk prioritized presentation</li>
+        <li>Predictable action flows</li>
+        <li>Information density balanced with structure</li>
+      </ul>
+
+      <h2>9. Strengths</h2>
+      <ul>
+        <li>High-contrast and professional visual language</li>
+        <li>Strong dashboard feel for fraud and investigation workflows</li>
+        <li>Consistent iconography and standard interface patterns</li>
+        <li>Clear separation between overview, analytics, and operational tasks</li>
+        <li>Good fit for monitoring and forensic analysis workflows</li>
+      </ul>
+
+      <h2>10. Design Improvement Opportunities</h2>
+      <ul>
+        <li>More explicit empty and loading states for backend-dependent sections</li>
+        <li>More polished transitions for screen changes and tab switches</li>
+        <li>Improved emphasis for secondary actions and contextual status messages</li>
+        <li>Use of standardized spacing and behavior consistency across all content panels</li>
+      </ul>
+
+      <h2>11. Final UI/UX Summary</h2>
+      <p>
+        The interface is designed like a high-performance investigation console: dark, structured, action-oriented, and heavy
+        on technical clarity. The information hierarchy supports a security operator who needs to navigate quickly, assess risk,
+        understand graph relationships, and review account activity with minimal friction. The overall experience is practical,
+        professional, and suitable for a serious blockchain investigation workflow.
+      </p>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ChainGuard Frontend Full Project Report</title>
+    <style>
+      :root {
+        --bg: #0f172a;
+        --card: #111827;
+        --panel: #1f2937;
+        --line: #334155;
+        --text: #e5e7eb;
+        --muted: #94a3b8;
+        --accent: #7dd3fc;
+        --accent2: #a78bfa;
+        --success: #34d399;
+        --warning: #fbbf24;
+        --danger: #f87171;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Arial, Helvetica, sans-serif;
+        background: linear-gradient(180deg, #0b1220, #111827);
+        color: var(--text);
+        line-height: 1.6;
+      }
+      .page {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 40px 24px 80px;
+      }
+      .cover {
+        background: linear-gradient(135deg, rgba(125,211,252,0.12), rgba(167,139,250,0.18));
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 30px;
+        margin-bottom: 24px;
+      }
+      h1, h2, h3, h4 { margin: 0 0 12px; }
+      h1 { font-size: 38px; letter-spacing: 0.04em; }
+      h2 { font-size: 26px; margin-top: 28px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+      h3 { font-size: 20px; margin-top: 18px; }
+      .meta {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+        margin-top: 18px;
+      }
+      .meta-item, .card {
+        background: rgba(17,24,39,0.9);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 16px 18px;
+      }
+      .label {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .value {
+        font-size: 17px;
+        margin-top: 4px;
+        font-weight: 600;
+      }
+      ul, ol { margin: 10px 0 12px 22px; }
+      li { margin-bottom: 6px; }
+      .keywords {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .keyword {
+        background: rgba(125,211,252,0.12);
+        color: var(--accent);
+        border: 1px solid rgba(125,211,252,0.35);
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 12px;
+        overflow: hidden;
+        border-radius: 12px;
+      }
+      th, td {
+        border: 1px solid var(--line);
+        padding: 10px 12px;
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        background: rgba(31,41,55,0.95);
+      }
+      .status-good { color: var(--success); font-weight: 700; }
+      .status-warn { color: var(--warning); font-weight: 700; }
+      .status-bad { color: var(--danger); font-weight: 700; }
+      @media print {
+        body { background: white; color: #111827; }
+        .cover, .meta-item, .card { background: white; color: #111827; border-color: #d1d5db; }
+        .keyword { background: #e0f2fe; color: #0f172a; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="cover">
+        <h1>ChainGuard Frontend Project Report</h1>
+        <p>Full technical overview of the frontend application, architecture, UI structure, navigation flow, integration layers, and production readiness.</p>
+        <div class="keywords">
+          <span class="keyword">React</span>
+          <span class="keyword">TypeScript</span>
+          <span class="keyword">Vite</span>
+          <span class="keyword">Frontend</span>
+          <span class="keyword">Dashboard</span>
+          <span class="keyword">Sidebar</span>
+          <span class="keyword">Navigation</span>
+          <span class="keyword">State Management</span>
+          <span class="keyword">API Integration</span>
+          <span class="keyword">UI/UX</span>
+          <span class="keyword">Lucide Icons</span>
+          <span class="keyword">React Flow</span>
+        </div>
+        <div class="meta">
+          <div class="meta-item">
+            <div class="label">Project Type</div>
+            <div class="value">Investigations Dashboard</div>
+          </div>
+          <div class="meta-item">
+            <div class="label">Core Stack</div>
+            <div class="value">React + TypeScript + Vite</div>
+          </div>
+          <div class="meta-item">
+            <div class="label">Architecture</div>
+            <div class="value">Component-based SPA</div>
+          </div>
+          <div class="meta-item">
+            <div class="label">Status</div>
+            <div class="value status-good">Production-ready frontend structure</div>
+          </div>
+        </div>
+      </div>
+
+      <h2>1. Executive Summary</h2>
+      <p>
+        This frontend is a blockchain investigation console focused on case review, risk analysis, wallet investigation,
+        fund flow visualization, and AI-assisted investigation panels. The application uses a single-page dashboard layout
+        with a left sidebar, top status bar, and dynamic content area. The frontend is designed to consume backend APIs for
+        case data, graph data, risk data, attribution data, and AI interpretation while keeping UI rendering clean and modular.
+      </p>
+      <p>
+        The project follows a component-driven approach. The main app shell keeps navigation state in the root component, while
+        inner workspace sections render the relevant screen or investigation tab. This structure is good for backend integration
+        because the API layer is separated from the visual components and the UI can be connected to real endpoints without major
+        rewrites.
+      </p>
+
+      <h2>2. Technology Stack</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Layer</th>
+            <th>Technology</th>
+            <th>Purpose</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Application</td>
+            <td>React</td>
+            <td>UI composition and component lifecycle</td>
+          </tr>
+          <tr>
+            <td>Language</td>
+            <td>TypeScript</td>
+            <td>Type safety and structure for frontend logic</td>
+          </tr>
+          <tr>
+            <td>Build Tool</td>
+            <td>Vite</td>
+            <td>Fast local dev server and production build pipeline</td>
+          </tr>
+          <tr>
+            <td>Icons</td>
+            <td>lucide-react</td>
+            <td>Sidebar icons and toolbar actions</td>
+          </tr>
+          <tr>
+            <td>Visualization</td>
+            <td>React Flow</td>
+            <td>Graph/network investigation visualizations</td>
+          </tr>
+          <tr>
+            <td>Testing</td>
+            <td>Vitest + jsdom</td>
+            <td>Frontend unit testing</td>
+          </tr>
+          <tr>
+            <td>Styling</td>
+            <td>CSS files + theme variables</td>
+            <td>Design system, layout styling, styling consistency</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>3. Project Structure</h2>
+      <ul>
+        <li>App.tsx — root state and main navigation controller</li>
+        <li>api.ts — API service layer and backend endpoint definitions</li>
+        <li>main.tsx — app bootstrap and provider setup</li>
+        <li>components/Layout.tsx — sidebar, top bar, and shell layout</li>
+        <li>components/InvestigationWorkspace.tsx — investigation tabs + workspace content</li>
+        <li>screens/Overview.tsx — dashboard overview screen</li>
+        <li>screens/NewInvestigation.tsx — new case investigation flow</li>
+        <li>screens/Transactions.tsx — transaction list view</li>
+        <li>screens/RiskAndFraud.tsx — risk analysis view</li>
+        <li>screens/Attribution.tsx — attribution analysis</li>
+        <li>screens/AIInvestigation.tsx — AI summary section</li>
+        <li>screens/FundFlow.tsx — flow analysis</li>
+        <li>screens/InvestigationGraph.tsx — graph visualization</li>
+        <li>screens/InvestigationReport.tsx — report section</li>
+        <li>components/BaseComponents.tsx — reusable UI primitives</li>
+        <li>styles/theme.css — global design tokens and theme</li>
+      </ul>
+
+      <h2>4. Core Frontend Architecture</h2>
+      <ul>
+        <li>The root app manages the current screen state using React hooks.</li>
+        <li>The sidebar acts as the central navigation trigger for the active main view.</li>
+        <li>The workspace component manages inner tabs like Overview, Transactions, Risk, Graph, AI, Timeline, and Report.</li>
+        <li>UI state is separated from remote API interaction, which helps backend integration stay clean.</li>
+        <li>Responsive layout and fixed shell structure remain consistent for desktop and later extension work.</li>
+      </ul>
+
+      <h2>5. Navigation and Sidebar Design</h2>
+      <p>The sidebar is built as a vertical navigation list using reusable button elements and icon components. It includes:</p>
+      <ul>
+        <li>Overview</li>
+        <li>New Investigation</li>
+        <li>Investigations</li>
+        <li>Transactions</li>
+        <li>Fund Flow</li>
+        <li>Investigation Graph</li>
+        <li>Risk & Fraud</li>
+        <li>Attribution</li>
+        <li>AI Investigation</li>
+        <li>Timeline</li>
+        <li>Investigation Report</li>
+        <li>System Status</li>
+      </ul>
+      <p>
+        The main item flow is: click button → update currentScreen state → render correct screen → highlight active menu item.
+        The workspace tab flow works similarly: click tab → update activeTab state → render selected investigation panel.
+      </p>
+
+      <h2>6. State Management</h2>
+      <ul>
+        <li>Current screen is managed in the root App component.</li>
+        <li>Workspace tabs use local component state for inner investigation sections.</li>
+        <li>Transactions, graph, risk, attributions, and AI response are stored in local React state.</li>
+        <li>Data is loaded on mount through an async effect using the API service layer.</li>
+        <li>WebSocket realtime status is also handled by a dedicated effect.</li>
+      </ul>
+
+      <h2>7. API and Backend Integration</h2>
+      <p>The frontend keeps a dedicated service boundary in the API module. This is the main integration contract.</p>
+      <ul>
+        <li>Health check endpoint</li>
+        <li>Transactions retrieval</li>
+        <li>Graph data retrieval</li>
+        <li>Flow path retrieval</li>
+        <li>Attribution retrieval</li>
+        <li>Risk score retrieval</li>
+        <li>AI summary and AI explanation endpoints</li>
+        <li>Realtime websocket endpoint generation</li>
+      </ul>
+      <p>Environment variables are used to configure the backend base URL and websocket connection, which keeps the frontend ready for backend deployment without embedding hardcoded service URLs.</p>
+
+      <h2>8. User Experience and Interface Design</h2>
+      <p>The UI emphasizes investigation-first experiences:</p>
+      <ul>
+        <li>dark dashboard theme for operations console feel</li>
+        <li>strong visual hierarchy for case/security information</li>
+        <li>clear left navigation for task separation</li>
+        <li>high-contrast risk indicators and badges</li>
+        <li>cards and panels for metrics, summaries, and network previews</li>
+        <li>clear content grouping for risk, AI, transactions, and timeline screens</li>
+      </ul>
+
+      <h2>9. Key Screens Implemented</h2>
+      <ul>
+        <li>Overview screen</li>
+        <li>New Investigation flow</li>
+        <li>Transactions list</li>
+        <li>Risk and Fraud analysis</li>
+        <li>Attribution analysis</li>
+        <li>AI Investigation view</li>
+        <li>Timeline</li>
+        <li>Fund Flow analysis</li>
+        <li>Investigation Graph</li>
+        <li>Investigation Report</li>
+      </ul>
+
+      <h2>10. Frontend Health and Quality</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Check</th>
+            <th>Status</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>TypeScript compile</td>
+            <td class="status-good">Passed</td>
+            <td>Build passes with the current codebase</td>
+          </tr>
+          <tr>
+            <td>Production build</td>
+            <td class="status-good">Passed</td>
+            <td>Vite build completed successfully</td>
+          </tr>
+          <tr>
+            <td>Unit tests</td>
+            <td class="status-good">Passed</td>
+            <td>Vitest suite passes</td>
+          </tr>
+          <tr>
+            <td>Sidebar navigation</td>
+            <td class="status-good">Fixed and stable</td>
+            <td>Navigation sync is maintained</td>
+          </tr>
+          <tr>
+            <td>Demo data cleanup</td>
+            <td class="status-good">Completed</td>
+            <td>Hardcoded mock content removed from main frontend flow</td>
+          </tr>
+          <tr>
+            <td>Backend integration readiness</td>
+            <td class="status-good">Ready</td>
+            <td>Service abstraction exists for real backend endpoints</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>11. Production Readiness Notes</h2>
+      <ul>
+        <li>Frontend remains modular and easy to merge with a backend service layer.</li>
+        <li>Navigation logic is kept small and predictable.</li>
+        <li>Environment-driven configuration prevents accidental hardcoding of deployment values.</li>
+        <li>UI has clear separation between data fetching, state control, and display rendering.</li>
+        <li>No unnecessary dependencies were introduced.</li>
+      </ul>
+
+      <h2>12. Summary</h2>
+      <p>
+        The ChainGuard frontend is a modern dashboard-style investigation console built with React, TypeScript, and Vite.
+        It is designed for operational intelligence, blockchain investigations, risk review, and AI-assisted analysis. The
+        architecture is clean, the UI is consistent, the navigation is production-safe, and the API layer is ready for real
+        backend integration without redesigning the frontend. The app has been refined to remove demo-only content, fix the
+        navigation flow, and keep the structure suitable for a clean team merge with backend development.
+      </p>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,121 @@
+.workspace {
+  display: flex;
+  height: 100%;
+  background-color: var(--bg-base);
+}
+
+.workspace__sidebar {
+  width: 240px;
+  background-color: var(--surface-1);
+  border-right: 1px solid var(--border-subtle);
+  overflow-y: auto;
+  flex-shrink: 0;
+  transition: all 200ms ease;
+}
+
+.workspace__sidebar--open {
+  width: 280px;
+}
+
+.workspace__main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Tabs */
+.workspace__tabs {
+  display: flex;
+  gap: 0;
+  background-color: var(--surface-2);
+  border-bottom: 1px solid var(--border-subtle);
+  overflow-x: auto;
+  flex-shrink: 0;
+  padding: 0 var(--spacing-lg);
+}
+
+.workspace__tab {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 150ms ease;
+  position: relative;
+}
+
+.workspace__tab:hover:not(.workspace__tab--active) {
+  color: var(--text-primary);
+}
+
+.workspace__tab--active {
+  color: var(--accent-primary);
+  border-bottom-color: var(--accent-primary);
+}
+
+/* Content */
+.workspace__content {
+  flex: 1;
+  overflow-y: auto;
+  background-color: var(--bg-base);
+}
+
+/* Mobile sidebar toggle */
+.workspace__sidebar-toggle {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background-color: var(--accent-primary);
+  color: var(--text-inverse);
+  font-size: 24px;
+  border: none;
+  cursor: pointer;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .workspace__sidebar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform 200ms ease;
+    max-width: 280px;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
+  }
+
+  .workspace__sidebar--open {
+    transform: translateX(0);
+  }
+
+  .workspace__sidebar-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .workspace__tabs {
+    overflow-x: scroll;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .workspace__tab {
+    padding: var(--spacing-md) var(--spacing-md);
+    font-size: 12px;
+  }
+}

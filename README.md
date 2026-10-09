@@ -300,7 +300,7 @@ Use ChainGuard for authorized analysis and treat every result as a lead for huma
 
 ## License
 
-No `LICENSE` file is currently present in the repository. No license is asserted by this README; add a license only after the project owner chooses one.
+ChainGuard is licensed under the [MIT License](LICENSE). Subject to the license's terms, users may use, copy, modify, distribute, and commercially reuse this project. Third-party dependencies, libraries, and assets remain subject to their own licenses.
 
 ## Disclaimer
 

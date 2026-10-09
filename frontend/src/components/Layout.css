@@ -149,6 +149,13 @@
   color: var(--text-secondary);
 }
 
+.sidebar__status-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
 .sidebar__status-dot {
   width: 6px;
   height: 6px;

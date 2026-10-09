@@ -19,9 +19,8 @@ import { Layout } from "./components/Layout";
 import { Overview } from "./screens/Overview";
 import { NewInvestigation } from "./screens/NewInvestigation";
 import { InvestigationWorkspace } from "./components/InvestigationWorkspace";
+import type { BackendHealthStatus, LiveEventsStatus } from "./connectivity";
 import "./styles/theme.css";
-
-type RealtimeStatus = "connecting" | "connected" | "disconnected" | "disabled";
 
 const STORAGE_KEY = "chaingaurd.active-investigation";
 
@@ -144,13 +143,15 @@ export default function App() {
   });
   const [aiResponse, setAiResponse] = useState<AIResponse | null>(null);
   const [health, setHealth] = useState<HealthStatus | null>(null);
+  const [backendHealthStatus, setBackendHealthStatus] =
+    useState<BackendHealthStatus>("checking");
   const [caseStatus, setCaseStatus] = useState<CaseStatus | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [realtimeStatus, setRealtimeStatus] =
-    useState<RealtimeStatus>("disconnected");
+  const [liveEventsStatus, setLiveEventsStatus] =
+    useState<LiveEventsStatus>("idle");
   const analyzedCases = useRef<Set<string>>(new Set());
 
   const hasActiveCase = Boolean(activeCaseId && reportedWallet);
@@ -285,14 +286,18 @@ export default function App() {
   useEffect(() => {
     api
       .health()
-      .then(setHealth)
-      .catch(() =>
+      .then((healthResponse) => {
+        setHealth(healthResponse);
+        setBackendHealthStatus("online");
+      })
+      .catch(() => {
         setHealth({
           status: "error",
           real_mode: false,
           demo_mode: false,
-        }),
-      );
+        });
+        setBackendHealthStatus("offline");
+      });
   }, []);
 
   useEffect(() => {
@@ -308,22 +313,22 @@ export default function App() {
 
   useEffect(() => {
     if (!activeCaseId) {
-      setRealtimeStatus("disconnected");
+      setLiveEventsStatus("idle");
       return;
     }
     if (health?.real_mode) {
-      setRealtimeStatus("disabled");
+      setLiveEventsStatus("disabled");
       return;
     }
     const url = realtimeUrl(activeCaseId);
     if (!url) {
-      setRealtimeStatus("disabled");
+      setLiveEventsStatus("disabled");
       return;
     }
 
     const socket = new WebSocket(url);
-    setRealtimeStatus("connecting");
-    socket.onopen = () => setRealtimeStatus("connected");
+    setLiveEventsStatus("connecting");
+    socket.onopen = () => setLiveEventsStatus("connected");
     socket.onmessage = (message) => {
       const event = JSON.parse(message.data) as {
         error?: string;
@@ -336,7 +341,7 @@ export default function App() {
         timestamp: string;
       };
       if (event.error) {
-        setRealtimeStatus("disabled");
+        setLiveEventsStatus("disabled");
         socket.close();
         return;
       }
@@ -371,10 +376,10 @@ export default function App() {
         .catch(() => undefined);
     };
     socket.onclose = () =>
-      setRealtimeStatus((current) =>
+      setLiveEventsStatus((current) =>
         current === "disabled" ? current : "disconnected",
       );
-    socket.onerror = () => setRealtimeStatus("disconnected");
+    socket.onerror = () => setLiveEventsStatus("disconnected");
     return () => socket.close();
   }, [activeCaseId, health?.real_mode]);
 
@@ -623,7 +628,8 @@ export default function App() {
       walletAddress={reportedWallet || undefined}
       riskScore={risk.overall_score || undefined}
       hasActiveCase={hasActiveCase}
-      realtimeStatus={realtimeStatus}
+      backendHealthStatus={backendHealthStatus}
+      liveEventsStatus={liveEventsStatus}
       onRefresh={hasActiveCase ? handleRefresh : undefined}
       loading={loading || analyzing}
       error={error}

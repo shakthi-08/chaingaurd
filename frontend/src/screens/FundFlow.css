@@ -76,9 +76,15 @@
 .fund-flow__canvas {
   flex: 1;
   min-height: 400px;
+  height: 420px;
   position: relative;
   overflow: hidden;
   border: 1px solid var(--border-subtle);
+}
+
+.fund-flow__canvas .react-flow {
+  height: 100%;
+  min-height: 400px;
 }
 
 /* Node styling */

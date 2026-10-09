@@ -5,10 +5,10 @@ from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
-from app.database import SessionLocal, init_db
+from app.database import SessionLocal
 from app.models import Case, Transaction
 from app.models.investigation_event import InvestigationEvent
-from app.services.demo_provider import DemoBlockchainProvider
+from app.services.wallet_ingestion_service import WalletIngestionService
 
 
 class EventProcessingService:
@@ -16,13 +16,12 @@ class EventProcessingService:
 
     def __init__(self, session_factory=SessionLocal) -> None:
         self.session_factory = session_factory
-        init_db()
 
     @classmethod
     def validate(cls, event: InvestigationEvent) -> InvestigationEvent:
         if not event.case_id.strip():
             raise ValueError("case_id is required")
-        if event.chain not in DemoBlockchainProvider.SUPPORTED_CHAINS:
+        if event.chain not in WalletIngestionService.SUPPORTED_CHAINS:
             raise ValueError(f"Unsupported chain: {event.chain}")
         if event.event_type not in cls.VALID_EVENT_TYPES:
             raise ValueError(f"Unsupported event type: {event.event_type}")

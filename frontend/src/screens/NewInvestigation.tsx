@@ -3,16 +3,22 @@ import { Button, Card } from '../components/BaseComponents';
 import './NewInvestigation.css';
 
 interface NewInvestigationProps {
-  onSubmit: (walletAddress: string) => void;
+  onSubmit: (walletAddress: string, chain?: string, maxHops?: number) => void;
   isLoading?: boolean;
+  error?: string | null;
+  realMode?: boolean;
 }
 
 export const NewInvestigation: React.FC<NewInvestigationProps> = ({
   onSubmit,
   isLoading = false,
+  error: submitError,
+  realMode = false,
 }) => {
-  const [walletAddress, setWalletAddress] = useState('');
-  const [error, setError] = useState('');
+  const [walletAddress, setWalletAddress] = useState("");
+  const [chain, setChain] = useState("ethereum");
+  const [maxHops, setMaxHops] = useState(1);
+  const [error, setError] = useState("");
 
   const isValidAddress = (address: string) => {
     // Basic Ethereum address validation
@@ -37,7 +43,7 @@ export const NewInvestigation: React.FC<NewInvestigationProps> = ({
       return;
     }
 
-    onSubmit(trimmed);
+    onSubmit(trimmed, chain, maxHops);
   };
 
   const handlePaste = async () => {
@@ -84,9 +90,41 @@ export const NewInvestigation: React.FC<NewInvestigationProps> = ({
             {error && (
               <div className="new-investigation__error">{error}</div>
             )}
+            {submitError && (
+              <div className="new-investigation__error">{submitError}</div>
+            )}
             <p className="new-investigation__help">
-              Enter a valid Ethereum wallet address (0x followed by 40 hex characters)
+              {realMode
+                ? "REAL mode: ChainGuard will query the configured blockchain API. Investigation depth fetches counterparties on the same chain only."
+                : "DEMO mode uses synthetic provider data unless BLOCKCHAIN_PROVIDER=real."}
             </p>
+            <label className="new-investigation__label" htmlFor="chain">
+              Chain
+            </label>
+            <select
+              id="chain"
+              value={chain}
+              onChange={(event) => setChain(event.target.value)}
+              className="new-investigation__input"
+              disabled={isLoading}
+            >
+              <option value="ethereum">Ethereum</option>
+              <option value="polygon">Polygon</option>
+            </select>
+            <label className="new-investigation__label" htmlFor="hops">
+              Investigation depth (ingest hops)
+            </label>
+            <select
+              id="hops"
+              value={maxHops}
+              onChange={(event) => setMaxHops(Number(event.target.value))}
+              className="new-investigation__input"
+              disabled={isLoading}
+            >
+              <option value={1}>1 — reported wallet only</option>
+              <option value={2}>2 — include counterparties</option>
+              <option value={3}>3 — two hops of counterparties</option>
+            </select>
           </div>
 
           <Button

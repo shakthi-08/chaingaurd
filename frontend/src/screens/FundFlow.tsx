@@ -1,227 +1,126 @@
-import React, { useMemo, useState } from 'react';
-import ReactFlow, {
-  Node,
-  Edge,
-  Controls,
-  Background,
-  useNodesState,
-  useEdgesState,
-  MarkerType,
-} from 'reactflow';
-import { Badge, Card, EmptyState } from '../components/BaseComponents';
-import { Wallet, ArrowRight } from 'lucide-react';
-import './FundFlow.css';
+import React, { useMemo, useState } from "react";
+import ReactFlow, { Background, Controls, MarkerType, type Edge, type Node } from "reactflow";
+import { Badge, Card, EmptyState } from "../components/BaseComponents";
+import { formatCryptoValue, shortHash, type Path, type RiskAssessment, type Transaction } from "../api";
+import { ArrowRight } from "lucide-react";
+import "./FundFlow.css";
 
 interface FundFlowProps {
-  paths?: Array<{
-    rank: number;
-    start_wallet: string;
-    end_wallet: string;
-    wallets: string[];
-    transactions: string[];
-    hop_count: number;
-    total_value: string;
-    values: string[];
-    timestamps: string[];
-  }>;
-  risk?: {
-    overall_score: number;
-    risk_level: string;
-  };
+  paths?: Path[];
+  transactions?: Transaction[];
+  risk?: RiskAssessment;
+  seedWallet?: string;
 }
 
-export const FundFlow: React.FC<FundFlowProps> = ({ paths = [], risk }) => {
-  const [selectedPath, setSelectedPath] = useState<number | null>(null);
+export const FundFlow: React.FC<FundFlowProps> = ({
+  paths = [],
+  transactions = [],
+  seedWallet = "",
+}) => {
+  const [selectedPath, setSelectedPath] = useState<number | null>(0);
+  const txMap = useMemo(
+    () => new Map(transactions.map((item) => [item.tx_hash, item])),
+    [transactions],
+  );
 
-  // Build ReactFlow nodes and edges from paths
-  const { nodes: flowNodes, edges: flowEdges } = useMemo(() => {
-    if (!paths || paths.length === 0) {
-      return { nodes: [], edges: [] };
-    }
-
-    const nodes: Node[] = [];
-    const edges: Edge[] = [];
-    const nodeSet = new Set<string>();
-
-    paths.forEach((path, pathIndex) => {
-      const wallets = path.wallets || [];
-      
-      // Create nodes for each wallet in the path
-      wallets.forEach((wallet, walletIndex) => {
-        if (!nodeSet.has(wallet)) {
-          nodeSet.add(wallet);
-          
-          // Determine node type and color based on position and risk
-          let nodeType = 'normal';
-          let bgColor = 'var(--surface-2)';
-          let borderColor = 'var(--border-subtle)';
-          
-          if (walletIndex === 0) {
-            nodeType = 'source';
-            borderColor = 'var(--accent-primary)';
-          } else if (walletIndex === wallets.length - 1) {
-            nodeType = 'target';
-            borderColor = 'var(--success)';
-          } else {
-            borderColor = 'var(--warning)';
-          }
-
-          nodes.push({
-            id: wallet,
-            data: {
-              label: (
-                <div className="fund-flow__node">
-                  <Wallet size={16} />
-                  <code>{wallet.slice(0, 8)}...{wallet.slice(-6)}</code>
-                </div>
-              ),
-            },
-            position: {
-              x: walletIndex * 200,
-              y: pathIndex * 100,
-            },
-            style: {
-              background: bgColor,
-              border: `2px solid ${borderColor}`,
-              borderRadius: '6px',
-              padding: '8px 12px',
-              fontSize: '12px',
-              color: 'var(--text-primary)',
-              fontFamily: 'IBM Plex Mono, monospace',
-            },
-          });
-        }
+  const { nodes, edges } = useMemo(() => {
+    const path = selectedPath != null ? paths[selectedPath] : paths[0];
+    if (!path) return { nodes: [] as Node[], edges: [] as Edge[] };
+    const flowNodes: Node[] = path.wallets.map((wallet, index) => ({
+      id: wallet,
+      data: {
+        label:
+          index === 0 && wallet.toLowerCase() === seedWallet.toLowerCase()
+            ? `SEED ${shortHash(wallet)}`
+            : shortHash(wallet),
+      },
+      position: { x: index * 220, y: 80 },
+      style: {
+        background: index === 0 ? "#7c5cff" : index === path.wallets.length - 1 ? "#2ec4b6" : "#f0b429",
+        color: "#0b1020",
+        borderRadius: 8,
+        padding: 8,
+        fontWeight: 700,
+      },
+    }));
+    const flowEdges: Edge[] = [];
+    for (let index = 0; index < path.wallets.length - 1; index += 1) {
+      const hash = path.transactions[index];
+      const tx = hash ? txMap.get(hash) : undefined;
+      const value = tx?.value || path.values[index] || "0";
+      const token = tx?.token || null;
+      flowEdges.push({
+        id: `${path.rank}-${hash || index}`,
+        source: path.wallets[index],
+        target: path.wallets[index + 1],
+        label: `${formatCryptoValue(value, token)} · ${shortHash(hash || "", 4)}`,
+        markerEnd: { type: MarkerType.ArrowClosed },
       });
+    }
+    return { nodes: flowNodes, edges: flowEdges };
+  }, [paths, seedWallet, selectedPath, txMap]);
 
-      // Create edges between wallets in path
-      for (let i = 0; i < wallets.length - 1; i++) {
-        const fromWallet = wallets[i];
-        const toWallet = wallets[i + 1];
-        const txValue = path.values?.[i] || '0';
-        const edgeKey = `${fromWallet}->${toWallet}-${pathIndex}`;
-
-        // Scale edge width based on value (simple heuristic)
-        let strokeWidth = 2;
-        try {
-          const valueNum = parseFloat(txValue);
-          if (valueNum > 1000) strokeWidth = 4;
-          else if (valueNum > 100) strokeWidth = 3;
-        } catch {
-          // keep default
-        }
-
-        // Color based on risk level
-        let edgeColor = 'var(--success)';
-        if (risk?.risk_level === 'HIGH') {
-          edgeColor = 'var(--danger)';
-        } else if (risk?.risk_level === 'MEDIUM') {
-          edgeColor = 'var(--warning)';
-        }
-
-        edges.push({
-          id: edgeKey,
-          source: fromWallet,
-          target: toWallet,
-          label: (
-            <span className="fund-flow__edge-label" title={txValue}>
-              {parseFloat(txValue) > 1000 ? `${(parseFloat(txValue) / 1000).toFixed(1)}K` : `${txValue.slice(0, 8)}`}
-            </span>
-          ),
-          markerEnd: { type: MarkerType.ArrowClosed, color: edgeColor },
-          style: {
-            stroke: edgeColor,
-            strokeWidth,
-            opacity: selectedPath === pathIndex ? 1 : 0.5,
-          },
-          animated: selectedPath === pathIndex,
-        });
-      }
-    });
-
-    return { nodes, edges };
-  }, [paths, selectedPath, risk?.risk_level]);
-
-  if (!paths || paths.length === 0) {
+  if (!paths.length) {
     return (
       <div className="fund-flow">
         <EmptyState
           icon={<ArrowRight size={48} />}
-          heading="No fund flow data available"
-          description="Paths will appear once blockchain analysis completes"
+          heading="No fund-flow paths yet"
+          description="Paths are built from ingested case transactions. Increase investigation depth to follow counterparties."
         />
       </div>
     );
   }
+
+  const active = selectedPath != null ? paths[selectedPath] : paths[0];
 
   return (
     <div className="fund-flow">
       <div className="fund-flow__header">
         <h2>Fund Flow Analysis</h2>
         <p className="fund-flow__subtitle">
-          Directional wallet movement and transaction paths
+          Directed paths from the reported wallet using actual transaction amounts and hashes.
         </p>
       </div>
 
-      {/* Path selector pills */}
       <div className="fund-flow__paths">
-        {paths.map((path, index) => (
+        {paths.slice(0, 8).map((path, index) => (
           <button
-            key={`${path.start_wallet}-${path.end_wallet}-${index}`}
-            className={`fund-flow__path-pill ${
-              selectedPath === index ? 'fund-flow__path-pill--active' : ''
-            }`}
-            onClick={() => setSelectedPath(selectedPath === index ? null : index)}
+            key={`${path.rank}-${path.end_wallet}`}
+            className={`fund-flow__path-pill ${selectedPath === index ? "fund-flow__path-pill--active" : ""}`}
+            onClick={() => setSelectedPath(index)}
           >
-            <span className="fund-flow__path-number">Path {index + 1}</span>
-            <span className="fund-flow__path-hops">{path.hop_count} hops</span>
-            <Badge
-              variant={
-                parseFloat(path.total_value) > 10000
-                  ? 'danger'
-                  : parseFloat(path.total_value) > 1000
-                    ? 'warning'
-                    : 'success'
-              }
-            >
-              {parseFloat(path.total_value).toLocaleString('en-US', {
-                maximumFractionDigits: 0,
-              })}
-            </Badge>
+            <span className="fund-flow__path-number">Path {path.rank}</span>
+            <span className="fund-flow__path-hops">{path.hop_count} hop{path.hop_count === 1 ? "" : "s"}</span>
+            <Badge variant="primary">{formatCryptoValue(path.total_value)}</Badge>
           </button>
         ))}
       </div>
 
-      {/* ReactFlow graph */}
       <Card className="fund-flow__canvas">
-        <ReactFlow nodes={flowNodes} edges={flowEdges}>
+        <ReactFlow nodes={nodes} edges={edges} fitView>
           <Background color="var(--border-subtle)" gap={16} />
           <Controls />
         </ReactFlow>
       </Card>
 
-      {/* Legend */}
-      <div className="fund-flow__legend">
-        <div className="fund-flow__legend-item">
-          <div className="fund-flow__legend-box" style={{ borderColor: 'var(--accent-primary)' }} />
-          <span>Source Wallet</span>
-        </div>
-        <div className="fund-flow__legend-item">
-          <div className="fund-flow__legend-box" style={{ borderColor: 'var(--warning)' }} />
-          <span>Intermediary</span>
-        </div>
-        <div className="fund-flow__legend-item">
-          <div className="fund-flow__legend-box" style={{ borderColor: 'var(--success)' }} />
-          <span>Destination</span>
-        </div>
-        <div className="fund-flow__legend-item">
-          <div className="fund-flow__legend-line" style={{ borderTopWidth: '2px' }} />
-          <span>Low Value</span>
-        </div>
-        <div className="fund-flow__legend-item">
-          <div className="fund-flow__legend-line" style={{ borderTopWidth: '4px' }} />
-          <span>High Value</span>
-        </div>
-      </div>
+      {active && (
+        <Card>
+          <h3>Selected path</h3>
+          <p>{active.wallets.map((wallet) => shortHash(wallet)).join(" → ")}</p>
+          <ul>
+            {active.transactions.map((hash, index) => {
+              const tx = txMap.get(hash);
+              return (
+                <li key={hash}>
+                  {hash} · {formatCryptoValue(tx?.value || active.values[index], tx?.token)} ·{" "}
+                  {tx?.timestamp ? new Date(tx.timestamp).toLocaleString() : active.timestamps[index]}
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      )}
     </div>
   );
 };

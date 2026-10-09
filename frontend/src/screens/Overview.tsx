@@ -13,6 +13,8 @@ import './Overview.css';
 interface OverviewProps {
   hasActiveCase: boolean;
   onStartInvestigation: () => void;
+  onOpenWorkspace?: () => void;
+  onNavigate?: (screen: string) => void;
   summary?: {
     transactions: number;
     wallets: number;
@@ -20,6 +22,8 @@ interface OverviewProps {
     importantPaths: number;
     score: number;
     attribution: number;
+    potentialVASPs?: number;
+    suspiciousEntities?: number;
   };
   risk?: {
     overall_score: number;
@@ -29,18 +33,32 @@ interface OverviewProps {
   };
   recentTransactions?: any[];
   aiSummary?: string;
+  error?: string | null;
+  health?: { real_mode?: boolean; demo_mode?: boolean; blockchain_provider?: string; operational_chains?: string[] } | null;
+  evidenceCount?: number;
+  alerts?: Array<{ category: string; severity: string; title: string; explanation: string }>;
+  chain?: string;
+  caseStatus?: { progress: number; current_stage?: string };
 }
 
 export const Overview: React.FC<OverviewProps> = ({
   hasActiveCase,
   onStartInvestigation,
+  onOpenWorkspace,
+  onNavigate,
   summary,
   risk,
   recentTransactions = [],
   aiSummary,
+  health,
+  evidenceCount,
+  alerts = [],
+  chain,
+  caseStatus,
 }) => {
   const riskScore = risk?.overall_score ?? 0;
   const riskLabel = risk?.risk_level ? risk.risk_level.toUpperCase() : 'UNKNOWN';
+  const progress = caseStatus?.progress ?? 0;
 
   if (!hasActiveCase) {
     return (
@@ -64,12 +82,16 @@ export const Overview: React.FC<OverviewProps> = ({
         <div className="overview__active-header">
           <div className="overview__active-info">
             <h2>Active Investigation</h2>
+            <p>
+              Chain/network: <strong>{chain || "unknown"}</strong>
+              {health?.real_mode ? " · REAL" : health?.demo_mode ? " · DEMO" : ""}
+            </p>
           </div>
           <div className="overview__active-actions">
             <Badge variant={riskScore >= 80 ? 'danger' : riskScore >= 50 ? 'warning' : 'primary'}>
               {riskLabel}
             </Badge>
-            <Button variant="secondary" size="sm">
+            <Button variant="secondary" size="sm" onClick={onOpenWorkspace}>
               Open Workspace →
             </Button>
           </div>
@@ -90,22 +112,22 @@ export const Overview: React.FC<OverviewProps> = ({
         />
         <MetricCard
           label="Suspicious Entities"
-          value={summary?.importantPaths || 0}
+          value={summary?.suspiciousEntities || 0}
           icon={<AlertTriangle size={16} />}
         />
         <MetricCard
           label="Potential VASPs"
-          value={summary?.attribution || 0}
+          value={summary?.potentialVASPs || 0}
           icon={<Target size={16} />}
         />
         <MetricCard
           label="Evidence Items"
-          value={risk?.evidence_refs?.length || 0}
+          value={evidenceCount ?? 0}
           icon={<FileText size={16} />}
         />
         <MetricCard
           label="Investigation Progress"
-          value={`${Math.min(100, Math.max(0, riskScore))}%`}
+          value={`${Math.min(100, Math.max(0, progress))}%`}
           icon={<TrendingUp size={16} />}
         />
       </div>
@@ -127,20 +149,34 @@ export const Overview: React.FC<OverviewProps> = ({
               </div>
             ))}
           </div>
-          <a href="#" className="overview__link">
+          <button type="button" className="overview__link" onClick={() => onNavigate?.("risk")}>
             View full risk analysis →
-          </a>
+          </button>
+        </Card>
+
+        <Card className="overview__network-preview">
+          <h3>Automated alerts</h3>
+          {alerts.length === 0 ? (
+            <p>No evidence-supported alerts for this case yet.</p>
+          ) : (
+            alerts.slice(0, 4).map((alert) => (
+              <div key={`${alert.category}-${alert.title}`} className="overview__indicator">
+                <Badge variant={alert.severity === "high" ? "danger" : "warning"}>{alert.category}</Badge>
+                <p>{alert.title}</p>
+              </div>
+            ))
+          )}
         </Card>
 
         <Card className="overview__network-preview">
           <h3>Network Preview</h3>
           <div className="overview__network-placeholder">
             <div className="overview__network-icon">🔗</div>
-            <p>{summary?.wallets || 0} nodes • {summary?.hops || 0} hops</p>
+            <p>{summary?.wallets || 0} nodes • {summary?.hops || 0} hops · {health?.real_mode ? "REAL" : "DEMO"}</p>
           </div>
-          <a href="#" className="overview__link">
+          <button type="button" className="overview__link" onClick={() => onNavigate?.("graph")}>
             Open full graph →
-          </a>
+          </button>
         </Card>
       </div>
 
@@ -172,29 +208,25 @@ export const Overview: React.FC<OverviewProps> = ({
               </div>
               <div>{tx.value}</div>
               <div>
-                <Badge
-                  variant={
-                    tx.risk === 'high' ? 'danger' : tx.risk === 'medium' ? 'warning' : 'success'
-                  }
-                >
-                  {tx.risk?.toUpperCase()}
+                <Badge variant="success">
+                  OBSERVED
                 </Badge>
               </div>
             </div>
           ))}
         </div>
-        <a href="#" className="overview__link">
+        <button type="button" className="overview__link" onClick={() => onNavigate?.("transactions")}>
           View all transactions →
-        </a>
+        </button>
       </Card>
 
       {/* AI Interpretation */}
       {aiSummary && (
         <AIInterpretationPanel>
           <p>{aiSummary}</p>
-          <a href="#" className="overview__link">
+          <button type="button" className="overview__link" onClick={() => onNavigate?.("ai")}>
             Open AI Investigation →
-          </a>
+          </button>
         </AIInterpretationPanel>
       )}
     </div>

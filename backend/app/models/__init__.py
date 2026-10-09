@@ -8,6 +8,8 @@ from app.models.risk_indicator_model import RiskIndicator
 from app.models.finding_model import Finding
 from app.models.evidence_model import Evidence
 from app.models.report_model import Report
+from app.models.alert_model import InvestigationAlert
+from app.models.lea_complaint_model import LeaComplaint
 
 __all__ = [
     "Case",
@@ -20,4 +22,6 @@ __all__ = [
     "Finding",
     "Evidence",
     "Report",
+    "InvestigationAlert",
+    "LeaComplaint",
 ]

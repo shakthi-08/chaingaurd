@@ -18,7 +18,7 @@ class Wallet(Base):
     first_seen: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_seen: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     labels: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
-    case_id: Mapped[int | None] = mapped_column(ForeignKey("cases.id"), nullable=True)
+    case_id: Mapped[int | None] = mapped_column(ForeignKey("cases.id"), nullable=True, index=True)
 
     case: Mapped["Case"] = relationship(back_populates="wallets")
     attributions: Mapped[list["Attribution"]] = relationship(back_populates="wallet")

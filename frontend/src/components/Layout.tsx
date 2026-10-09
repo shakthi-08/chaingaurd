@@ -12,8 +12,6 @@ import {
   Clock,
   BarChart3,
   Settings,
-  Bell,
-  User,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -26,19 +24,32 @@ interface NavItem {
   disabled?: boolean;
 }
 
+const CASE_TABS = new Set([
+  "transactions",
+  "fund-flow",
+  "graph",
+  "risk",
+  "attribution",
+  "ai",
+  "timeline",
+  "report",
+  "evidence",
+]);
+
 const NAV_ITEMS: NavItem[] = [
-  { id: 'overview', icon: <Home size={20} />, label: 'Overview' },
-  { id: 'new-investigation', icon: <Plus size={20} />, label: 'New Investigation' },
-  { id: 'investigations', icon: <FileText size={20} />, label: 'Investigations' },
-  { id: 'transactions', icon: <ArrowRightLeft size={20} />, label: 'Transactions' },
-  { id: 'fund-flow', icon: <TrendingUp size={20} />, label: 'Fund Flow' },
-  { id: 'graph', icon: <Network size={20} />, label: 'Investigation Graph' },
-  { id: 'risk', icon: <AlertTriangle size={20} />, label: 'Risk & Fraud' },
-  { id: 'attribution', icon: <Target size={20} />, label: 'Attribution' },
-  { id: 'ai', icon: <Zap size={20} />, label: 'AI Investigation' },
-  { id: 'timeline', icon: <Clock size={20} />, label: 'Timeline' },
-  { id: 'report', icon: <BarChart3 size={20} />, label: 'Investigation Report' },
-  { id: 'status', icon: <Settings size={20} />, label: 'System Status', disabled: true },
+  { id: "overview", icon: <Home size={20} />, label: "Overview" },
+  { id: "new-investigation", icon: <Plus size={20} />, label: "New Investigation" },
+  { id: "investigations", icon: <FileText size={20} />, label: "Investigations" },
+  { id: "transactions", icon: <ArrowRightLeft size={20} />, label: "Transactions" },
+  { id: "fund-flow", icon: <TrendingUp size={20} />, label: "Fund Flow" },
+  { id: "graph", icon: <Network size={20} />, label: "Investigation Graph" },
+  { id: "risk", icon: <AlertTriangle size={20} />, label: "Risk & Fraud" },
+  { id: "attribution", icon: <Target size={20} />, label: "Attribution" },
+  { id: "evidence", icon: <FileText size={20} />, label: "Evidence" },
+  { id: "ai", icon: <Zap size={20} />, label: "AI Investigation" },
+  { id: "timeline", icon: <Clock size={20} />, label: "Timeline" },
+  { id: "report", icon: <BarChart3 size={20} />, label: "Investigation Report" },
+  { id: "status", icon: <Settings size={20} />, label: "System Status" },
 ];
 
 interface SidebarProps {
@@ -47,7 +58,7 @@ interface SidebarProps {
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
   hasActiveCase?: boolean;
-  realtimeStatus?: 'connecting' | 'connected' | 'disconnected';
+  realtimeStatus?: "connecting" | "connected" | "disconnected" | "disabled";
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -56,16 +67,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isCollapsed = false,
   onToggleCollapse,
   hasActiveCase = false,
-  realtimeStatus = 'disconnected',
+  realtimeStatus = "disconnected",
 }) => {
   const getStatusColor = () => {
     switch (realtimeStatus) {
-      case 'connected':
-        return 'var(--success)';
-      case 'connecting':
-        return 'var(--warning)';
+      case "connected":
+        return "var(--success)";
+      case "connecting":
+        return "var(--warning)";
+      case "disabled":
+        return "var(--text-secondary)";
       default:
-        return 'var(--danger)';
+        return "var(--danger)";
     }
   };
 
@@ -84,7 +97,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       <nav className="sidebar__nav" aria-label="Main navigation">
         {NAV_ITEMS.map((item) => {
-          const isDisabled = Boolean(item.disabled) && !hasActiveCase;
+          const isDisabled = Boolean(item.disabled) || (CASE_TABS.has(item.id) && !hasActiveCase);
           return (
             <button
               key={item.id}
@@ -120,11 +133,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
           />
           {!isCollapsed && (
             <span className="sidebar__status-label">
-              {realtimeStatus === 'connected'
-                ? 'Connected'
-                : realtimeStatus === 'connecting'
-                  ? 'Connecting'
-                  : 'Offline'}
+              {realtimeStatus === "connected"
+                ? "Live events"
+                : realtimeStatus === "connecting"
+                  ? "Connecting"
+                  : realtimeStatus === "disabled"
+                    ? "Events off"
+                    : "Offline"}
             </span>
           )}
         </div>
@@ -148,8 +163,8 @@ interface TopBarProps {
   walletAddress?: string;
   riskScore?: number;
   status?: string;
-  onNotifications?: () => void;
-  onUserMenu?: () => void;
+  onRefresh?: () => void;
+  loading?: boolean;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -157,8 +172,8 @@ export const TopBar: React.FC<TopBarProps> = ({
   walletAddress,
   riskScore,
   status,
-  onNotifications,
-  onUserMenu,
+  onRefresh,
+  loading,
 }) => {
   const getRiskColor = (score?: number) => {
     if (!score) return 'var(--text-secondary)';
@@ -185,7 +200,12 @@ export const TopBar: React.FC<TopBarProps> = ({
           <span className="top-bar__case-id">{caseId}</span>
           <div className="top-bar__wallet">
             <code className="monospace">{walletAddress.slice(0, 8)}...{walletAddress.slice(-6)}</code>
-            <button className="top-bar__copy" title="Copy address" aria-label="Copy wallet address">
+            <button
+              className="top-bar__copy"
+              title="Copy address"
+              aria-label="Copy wallet address"
+              onClick={() => navigator.clipboard.writeText(walletAddress)}
+            >
               📋
             </button>
           </div>
@@ -207,22 +227,17 @@ export const TopBar: React.FC<TopBarProps> = ({
       )}
 
       <div className="top-bar__controls">
-        <button
-          className="top-bar__control-btn"
-          onClick={onNotifications}
-          title="Notifications"
-          aria-label="Open notifications"
-        >
-          <Bell size={18} />
-        </button>
-        <button
-          className="top-bar__control-btn"
-          onClick={onUserMenu}
-          title="User menu"
-          aria-label="Open user menu"
-        >
-          <User size={18} />
-        </button>
+        {onRefresh && (
+          <button
+            className="top-bar__control-btn"
+            onClick={onRefresh}
+            title="Refresh investigation"
+            aria-label="Refresh investigation"
+            disabled={loading}
+          >
+            Refresh
+          </button>
+        )}
       </div>
     </div>
   );
@@ -239,7 +254,10 @@ interface LayoutProps {
   walletAddress?: string;
   riskScore?: number;
   hasActiveCase?: boolean;
-  realtimeStatus?: 'connecting' | 'connected' | 'disconnected';
+  realtimeStatus?: "connecting" | "connected" | "disconnected" | "disabled";
+  onRefresh?: () => void;
+  loading?: boolean;
+  error?: string | null;
 }
 
 export const Layout: React.FC<LayoutProps> = ({
@@ -252,7 +270,10 @@ export const Layout: React.FC<LayoutProps> = ({
   walletAddress,
   riskScore,
   hasActiveCase = false,
-  realtimeStatus = 'disconnected',
+  realtimeStatus = "disconnected",
+  onRefresh,
+  loading = false,
+  error,
 }) => {
   return (
     <div className="layout">
@@ -269,8 +290,18 @@ export const Layout: React.FC<LayoutProps> = ({
           caseId={caseId}
           walletAddress={walletAddress}
           riskScore={riskScore}
-          status={realtimeStatus === 'connected' ? 'ANALYZING' : 'PAUSED'}
+          status={
+            realtimeStatus === "connected"
+              ? "LIVE"
+              : realtimeStatus === "disabled"
+                ? "REAL / NO LIVE EVENTS"
+                : "ACTIVE"
+          }
+          onRefresh={onRefresh}
+          loading={loading}
         />
+        {error && <div className="layout__error">{error}</div>}
+        {loading && <div className="layout__loading">Loading investigation…</div>}
         <main className="layout__content">{children}</main>
       </div>
     </div>

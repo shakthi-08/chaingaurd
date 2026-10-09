@@ -5,10 +5,14 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any, Iterable
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.database import SessionLocal, init_db
+from app.database import SessionLocal
 from app.models import Case, Finding, RiskIndicator, Transaction
+from app.services.protocol_detection_service import ProtocolDetectionService
+from app.services.protocol_registry import UNCONFIRMED_DESTINATION
+from app.services.reference_entity_dataset import REFERENCE_ENTITY_DATASET
 from app.services.transaction_graph_service import TransactionGraphService
 
 
@@ -18,6 +22,17 @@ DEFAULT_RISK_WEIGHTS: dict[str, float] = {
     "fan_out": 20.0,
     "high_hop_velocity": 20.0,
     "value_fragmentation": 20.0,
+    "mixer_exposure": 25.0,
+    "cross_chain_movement": 15.0,
+    "defi_interaction": 8.0,
+    "exchange_cash_out": 15.0,
+    "repeated_counterparties": 10.0,
+}
+
+_VASP_ADDRESSES = {
+    str(item["known_wallet"]).lower()
+    for item in REFERENCE_ENTITY_DATASET
+    if str(item.get("type") or "").lower() in {"vasp", "exchange"}
 }
 
 
@@ -30,7 +45,6 @@ class RiskAnalysisService:
     def __init__(self, session_factory=SessionLocal, weights: dict[str, float] | None = None) -> None:
         self.session_factory = session_factory
         self.weights = {**DEFAULT_RISK_WEIGHTS, **(weights or {})}
-        init_db()
 
     @staticmethod
     def _decimal(value: str) -> Decimal:
@@ -89,7 +103,7 @@ class RiskAnalysisService:
                                 "medium",
                                 self.weights["rapid_forwarding"],
                                 0.9,
-                                f"Suspicious pattern detected: wallet {wallet} received funds and forwarded them within {elapsed}. Requires further investigation.",
+                                f"Potential rapid fund movement detected: wallet {wallet} received funds and forwarded them within {elapsed}. Risk indicators are consistent with rapid movement; this is not a determination of fraud.",
                                 [inbound.tx_hash, outbound.tx_hash],
                                 [inbound.from_address, wallet, outbound.to_address],
                             )
@@ -116,7 +130,7 @@ class RiskAnalysisService:
                         "medium",
                         self.weights["fan_in"],
                         0.85,
-                        f"Suspicious pattern detected: {len(sources)} source wallets sent funds to {destination}. Requires further investigation.",
+                        f"Potential intermediary wallet usage detected: {len(sources)} source wallets sent funds to {destination}. Risk indicators are consistent with concentration; this is not a determination of fraud.",
                         refs_by_destination[destination],
                         [*sorted(sources), destination],
                     )
@@ -129,7 +143,7 @@ class RiskAnalysisService:
                         "medium",
                         self.weights["fan_out"],
                         0.85,
-                        f"Suspicious pattern detected: wallet {source} distributed funds to {len(destinations)} destination wallets. Requires further investigation.",
+                        f"Potential intermediary wallet usage detected: wallet {source} distributed funds to {len(destinations)} destination wallets. This is not a determination of fraud.",
                         refs_by_source[source],
                         [source, *sorted(destinations)],
                     )
@@ -149,7 +163,7 @@ class RiskAnalysisService:
                         "medium",
                         self.weights["high_hop_velocity"],
                         0.75,
-                        f"Suspicious pattern detected: {path['hop_count']} hops occurred within {max(timestamps) - min(timestamps)}. Requires further investigation.",
+                        f"Potential layering pattern detected: {path['hop_count']} hops occurred within {max(timestamps) - min(timestamps)}. Risk indicators are consistent with layering; this is not a determination of fraud.",
                         path["transactions"],
                         path["wallets"],
                     )
@@ -175,11 +189,105 @@ class RiskAnalysisService:
                     "medium",
                     self.weights["value_fragmentation"],
                     0.7,
-                    f"Suspicious pattern detected: wallet {source} split {total} across {len(transfers)} smaller transfers. Requires further investigation.",
+                    f"Potential layering pattern detected: wallet {source} split {total} across {len(transfers)} smaller transfers. This is not a determination of fraud.",
                     [item.tx_hash for item in transfers],
                     [source, *[item.to_address for item in transfers]],
                 )
             )
+        return indicators
+
+    def _repeated_counterparties(self, transactions: list[Transaction]) -> list[dict[str, Any]]:
+        counts: dict[tuple[str, str], list[Transaction]] = defaultdict(list)
+        for transaction in transactions:
+            pair = tuple(sorted((transaction.from_address, transaction.to_address)))
+            counts[pair].append(transaction)
+        indicators = []
+        for pair, items in sorted(counts.items()):
+            if len(items) < 3:
+                continue
+            indicators.append(
+                self._indicator(
+                    "repeated_counterparties",
+                    "low",
+                    self.weights.get("repeated_counterparties", 10.0),
+                    0.7,
+                    f"Repeated counterparties identified: {pair[0]} and {pair[1]} appear together in {len(items)} transfers.",
+                    [item.tx_hash for item in items],
+                    list(pair),
+                )
+            )
+        return indicators
+
+    def _known_entity_patterns(self, transactions: list[Transaction]) -> list[dict[str, Any]]:
+        detections = ProtocolDetectionService.detect_transactions(transactions)
+        indicators: list[dict[str, Any]] = []
+        seen_mixer: set[str] = set()
+        seen_bridge: set[str] = set()
+        seen_defi: set[str] = set()
+        seen_vasp: set[str] = set()
+
+        for item in detections:
+            category = item.get("category")
+            tx_hash = item["tx_hash"]
+            wallets = [item.get("wallet"), item.get("counterparty")]
+            if category == "mixer" and tx_hash not in seen_mixer:
+                seen_mixer.add(tx_hash)
+                indicators.append(
+                    self._indicator(
+                        "mixer_exposure",
+                        "high",
+                        self.weights.get("mixer_exposure", 25.0),
+                        0.85,
+                        f"Mixer exposure detected: interaction with known mixer/tumbler {item.get('protocol')}. "
+                        "This is an investigative risk indicator and does not automatically mean criminal activity.",
+                        [tx_hash],
+                        wallets,
+                    )
+                )
+            elif category == "bridge" and tx_hash not in seen_bridge:
+                seen_bridge.add(tx_hash)
+                dest = item.get("destination_chain")
+                extra = f" Reported destination chain {dest}." if dest else ""
+                indicators.append(
+                    self._indicator(
+                        "cross_chain_movement",
+                        "medium",
+                        self.weights.get("cross_chain_movement", 15.0),
+                        0.8,
+                        f"Cross-chain movement detected: interaction with known bridge {item.get('protocol')}.{extra} {UNCONFIRMED_DESTINATION}",
+                        [tx_hash],
+                        wallets,
+                    )
+                )
+            elif category in {"dex", "lending", "staking", "liquidity", "other_defi"} and tx_hash not in seen_defi:
+                seen_defi.add(tx_hash)
+                indicators.append(
+                    self._indicator(
+                        "defi_interaction",
+                        "low",
+                        self.weights.get("defi_interaction", 8.0),
+                        0.8,
+                        f"DeFi interaction identified: known {item.get('category')} protocol {item.get('protocol')}. Unknown contracts are not labeled.",
+                        [tx_hash],
+                        wallets,
+                    )
+                )
+
+        for transaction in transactions:
+            dest = (transaction.to_address or "").lower()
+            if dest in _VASP_ADDRESSES and transaction.tx_hash not in seen_vasp:
+                seen_vasp.add(transaction.tx_hash)
+                indicators.append(
+                    self._indicator(
+                        "exchange_cash_out",
+                        "medium",
+                        self.weights.get("exchange_cash_out", 15.0),
+                        0.7,
+                        f"Exchange exposure identified: transfer toward a publicly labeled VASP address {transaction.to_address}. Attribution remains a hypothesis.",
+                        [transaction.tx_hash],
+                        [transaction.from_address, transaction.to_address],
+                    )
+                )
         return indicators
 
     def analyze_transactions(
@@ -187,26 +295,50 @@ class RiskAnalysisService:
         transactions: Iterable[Transaction],
         *,
         paths: list[dict[str, Any]] | None = None,
+        start_wallets: Iterable[str] | None = None,
     ) -> dict[str, Any]:
         transaction_list = list(transactions)
         if paths is None:
-            start_wallets = sorted({item.from_address for item in transaction_list})
+            seeds = list(start_wallets) if start_wallets is not None else sorted({item.from_address for item in transaction_list})
+            if not seeds and transaction_list:
+                seeds = sorted({item.from_address for item in transaction_list})[:1]
             paths = []
-            for wallet in start_wallets:
-                paths.extend(TransactionGraphService.trace_paths_from_transactions(transaction_list, wallet))
+            for wallet in seeds[:3]:
+                paths.extend(
+                    TransactionGraphService.trace_paths_from_transactions(
+                        transaction_list,
+                        wallet,
+                        max_hops=TransactionGraphService.DEFAULT_MAX_HOPS,
+                        max_paths=TransactionGraphService.MAX_PATHS,
+                        max_neighbors=TransactionGraphService.MAX_NEIGHBORS_PER_NODE,
+                    )
+                )
 
         indicators = [
             *self._rapid_forwarding(transaction_list),
             *self._fan_patterns(transaction_list),
             *self._high_hop_velocity(transaction_list, paths),
             *self._value_fragmentation(transaction_list),
+            *self._repeated_counterparties(transaction_list),
+            *self._known_entity_patterns(transaction_list),
         ]
         overall_score = min(100.0, round(sum(item["score"] for item in indicators), 2))
         risk_level = "LOW" if overall_score <= 30 else "MEDIUM" if overall_score <= 70 else "HIGH"
         findings = [
             {
                 "type": item["type"],
-                "title": "Suspicious pattern detected",
+                "title": {
+                    "rapid_forwarding": "Potential rapid fund movement detected",
+                    "fan_in": "Potential intermediary wallet usage detected",
+                    "fan_out": "Potential intermediary wallet usage detected",
+                    "high_hop_velocity": "Potential layering pattern detected",
+                    "value_fragmentation": "Potential layering pattern detected",
+                    "mixer_exposure": "Mixer exposure detected",
+                    "cross_chain_movement": "Cross-chain movement detected",
+                    "defi_interaction": "DeFi interaction identified",
+                    "exchange_cash_out": "Exchange exposure identified",
+                    "repeated_counterparties": "Repeated counterparties identified",
+                }.get(item["type"], "Investigative risk indicator"),
                 "severity": item["severity"],
                 "score": item["score"],
                 "confidence": item["confidence"],
@@ -231,23 +363,94 @@ class RiskAnalysisService:
         case = session.query(Case).filter(Case.case_id == case_id).first()
         if case is None:
             return []
-        addresses = [wallet.address for wallet in case.wallets]
+        addresses = {wallet.address.lower() for wallet in case.wallets}
         if not addresses:
             return []
         return (
             session.query(Transaction)
-            .filter((Transaction.from_address.in_(addresses)) | (Transaction.to_address.in_(addresses)))
+            .filter(
+                (func.lower(Transaction.from_address).in_(addresses))
+                | (func.lower(Transaction.to_address).in_(addresses))
+            )
             .order_by(Transaction.timestamp.asc(), Transaction.id.asc())
             .all()
         )
 
+    def get_persisted_risk(self, case_id: str) -> dict[str, Any] | None:
+        with self.session_factory() as session:
+            indicators = session.query(RiskIndicator).filter(RiskIndicator.case_id == case_id).all()
+            findings = session.query(Finding).filter(Finding.case_id == case_id).all()
+            if not indicators and not findings:
+                return None
+            serialized_indicators = [
+                {
+                    "type": item.type,
+                    "severity": item.severity,
+                    "score": item.score,
+                    "weight": item.weight,
+                    "confidence": item.confidence,
+                    "explanation": item.explanation,
+                    "transaction_refs": item.transaction_refs or [],
+                    "wallet_addresses": item.wallet_addresses or [],
+                    "evidence_refs": item.evidence_refs or [],
+                }
+                for item in indicators
+            ]
+            serialized_findings = [
+                {
+                    "type": item.type,
+                    "title": item.title,
+                    "severity": item.severity,
+                    "score": item.score,
+                    "confidence": item.confidence,
+                    "explanation": item.explanation,
+                    "transaction_refs": item.transaction_refs or [],
+                    "wallet_addresses": item.wallet_addresses or [],
+                    "evidence_refs": item.evidence_refs or [],
+                }
+                for item in findings
+            ]
+            overall_score = min(100.0, round(sum(item["score"] for item in serialized_indicators), 2))
+            risk_level = "LOW" if overall_score <= 30 else "MEDIUM" if overall_score <= 70 else "HIGH"
+            return {
+                "overall_score": overall_score,
+                "risk_level": risk_level,
+                "indicators": serialized_indicators,
+                "findings": serialized_findings,
+                "explanations": [item["explanation"] for item in serialized_indicators if item.get("explanation")],
+                "evidence_refs": sorted(
+                    {ref for item in serialized_indicators for ref in (item.get("evidence_refs") or [])}
+                ),
+                "persisted": True,
+            }
+
     def analyze_case(self, case_id: str) -> dict[str, Any]:
         with self.session_factory() as session:
+            case = session.query(Case).filter(Case.case_id == case_id).first()
+            seed_wallets = []
+            if case is not None:
+                seed_wallets = [
+                    wallet.address
+                    for wallet in case.wallets
+                    if set(wallet.labels or []) & {"seed", "reported"}
+                ] or [wallet.address for wallet in case.wallets[:1]]
             transactions = self._case_transactions(session, case_id)
-            paths = []
-            for wallet in sorted({item.from_address for item in transactions}):
-                paths.extend(TransactionGraphService.trace_paths_from_transactions(transactions, wallet))
-            assessment = self.analyze_transactions(transactions, paths=paths)
+            session.expunge_all()
+
+        paths = []
+        for wallet in seed_wallets[:3]:
+            paths.extend(
+                TransactionGraphService.trace_paths_from_transactions(
+                    transactions,
+                    wallet,
+                    max_hops=TransactionGraphService.DEFAULT_MAX_HOPS,
+                    max_paths=TransactionGraphService.MAX_PATHS,
+                    max_neighbors=TransactionGraphService.MAX_NEIGHBORS_PER_NODE,
+                )
+            )
+        assessment = self.analyze_transactions(transactions, paths=paths, start_wallets=seed_wallets)
+
+        with self.session_factory() as session:
             session.query(RiskIndicator).filter(RiskIndicator.case_id == case_id).delete()
             session.query(Finding).filter(Finding.case_id == case_id).delete()
             for indicator in assessment["indicators"]:
@@ -283,7 +486,9 @@ class RiskAnalysisService:
                     )
                 )
             session.commit()
-            from app.services.evidence_service import EvidenceService
 
-            EvidenceService(self.session_factory).collect_case(case_id)
-            return assessment
+        from app.services.evidence_service import EvidenceService
+
+        EvidenceService(self.session_factory).collect_case(case_id)
+        assessment["persisted"] = True
+        return assessment

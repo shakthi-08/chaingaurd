@@ -31,6 +31,21 @@ def test_evidence_collection_is_traceable_and_deduplicated():
     assert all(item["evidence_id"].startswith("EV-") for item in first)
 
 
+def test_risk_analysis_is_idempotent_and_does_not_duplicate_evidence():
+    setup_case()
+
+    first_response = client.post("/cases/CASE-REPORT-01/analyze")
+    second_response = client.post("/cases/CASE-REPORT-01/analyze")
+    evidence = EvidenceService().list_case("CASE-REPORT-01")
+    risk = client.get("/cases/CASE-REPORT-01/risk")
+
+    assert first_response.status_code == 200
+    assert second_response.status_code == 200
+    assert risk.status_code == 200
+    assert evidence
+    assert len({item["evidence_id"] for item in evidence}) == len(evidence)
+
+
 def test_manual_evidence_creation_validates_references_and_is_idempotent():
     setup_case()
     payload = {
@@ -51,6 +66,15 @@ def test_manual_evidence_creation_validates_references_and_is_idempotent():
     assert first.json() == repeat.json()
     assert invalid.status_code == 400
     assert len(EvidenceService().list_case("CASE-REPORT-01")) == 1
+
+
+def test_get_case_evidence_returns_200_for_valid_case():
+    setup_case()
+
+    response = client.get("/cases/CASE-REPORT-01/evidence")
+
+    assert response.status_code == 200
+    assert response.json() == []
 
 
 def test_evidence_api_retrieves_case_evidence():
@@ -97,4 +121,5 @@ def test_report_api_returns_pdf_and_missing_cases_are_rejected():
     assert missing_report.status_code == 404
     assert reports.status_code == 200
     assert reports.json()
-    assert missing_evidence.status_code == 404
+    assert missing_evidence.status_code == 200
+    assert missing_evidence.json() == []

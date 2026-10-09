@@ -1,22 +1,58 @@
-import React, { useEffect, useState } from 'react';
-import { CaseSummary } from './Layout';
-import { Overview } from '../screens/Overview';
-import { Transactions } from '../screens/Transactions';
-import { RiskAndFraud } from '../screens/RiskAndFraud';
-import { Attribution } from '../screens/Attribution';
-import { AIInvestigation } from '../screens/AIInvestigation';
-import { Timeline } from '../screens/Timeline';
-import { FundFlow } from '../screens/FundFlow';
-import { InvestigationGraph } from '../screens/InvestigationGraph';
-import { InvestigationReport } from '../screens/InvestigationReport';
-import './InvestigationWorkspace.css';
+import React, { useEffect, useState } from "react";
+import { CaseSummary } from "./Layout";
+import { Overview } from "../screens/Overview";
+import { Transactions } from "../screens/Transactions";
+import { RiskAndFraud } from "../screens/RiskAndFraud";
+import { Attribution } from "../screens/Attribution";
+import { AIInvestigation } from "../screens/AIInvestigation";
+import { Timeline } from "../screens/Timeline";
+import { FundFlow } from "../screens/FundFlow";
+import { InvestigationGraph } from "../screens/InvestigationGraph";
+import { InvestigationReport } from "../screens/InvestigationReport";
+import { Evidence } from "../screens/Evidence";
+import type { AIResponse } from "../api";
+import "./InvestigationWorkspace.css";
 
 interface InvestigationWorkspaceProps {
   caseId: string;
   walletAddress: string;
-  data: any;
+  data: {
+    summary?: any;
+    transactions?: any[];
+    graph?: any;
+    paths?: any[];
+    risk?: any;
+    attributions?: any[];
+    evidence?: any[];
+    wallets?: any[];
+    aiResponse?: AIResponse | null;
+    alerts?: any[];
+    advancedIndicators?: {
+      defi?: any[];
+      bridges?: any[];
+      mixers?: any[];
+      unknown_contract_label?: string;
+    };
+    health?: any;
+    chain?: string;
+    loading?: boolean;
+    analyzing?: boolean;
+    error?: string | null;
+    caseStatus?: {
+      progress: number;
+      current_stage: string;
+      status: string;
+      error?: string | null;
+    };
+  };
   onNavigate?: (screen: string) => void;
   initialTab?: string;
+  onRefresh?: () => void;
+  onAskAi?: (question: string) => Promise<AIResponse | null>;
+  onAiAction?: (
+    action: "summary" | "risk" | "attribution" | "path" | "nextSteps",
+  ) => Promise<AIResponse | null>;
+  onExportReport?: () => Promise<void>;
 }
 
 export const InvestigationWorkspace: React.FC<InvestigationWorkspaceProps> = ({
@@ -24,7 +60,11 @@ export const InvestigationWorkspace: React.FC<InvestigationWorkspaceProps> = ({
   walletAddress,
   data,
   onNavigate,
-  initialTab = 'overview',
+  initialTab = "overview",
+  onRefresh,
+  onAskAi,
+  onAiAction,
+  onExportReport,
 }) => {
   const [activeTab, setActiveTab] = useState<string>(initialTab);
   const [caseSummaryOpen, setCaseSummaryOpen] = useState(false);
@@ -34,130 +74,122 @@ export const InvestigationWorkspace: React.FC<InvestigationWorkspaceProps> = ({
   }, [initialTab]);
 
   const tabs = [
-    { id: 'overview', label: 'Overview' },
-    { id: 'transactions', label: 'Transactions' },
-    { id: 'fund-flow', label: 'Fund Flow' },
-    { id: 'graph', label: 'Graph' },
-    { id: 'risk', label: 'Risk & Fraud' },
-    { id: 'attribution', label: 'Attribution' },
-    { id: 'ai', label: 'AI Investigation' },
-    { id: 'timeline', label: 'Timeline' },
-    { id: 'report', label: 'Report' },
+    { id: "overview", label: "Overview" },
+    { id: "transactions", label: "Transactions" },
+    { id: "fund-flow", label: "Fund Flow" },
+    { id: "graph", label: "Graph" },
+    { id: "risk", label: "Risk & Fraud" },
+    { id: "attribution", label: "Attribution" },
+    { id: "evidence", label: "Evidence" },
+    { id: "ai", label: "AI Investigation" },
+    { id: "timeline", label: "Timeline" },
+    { id: "report", label: "Report" },
   ];
 
   const renderTabContent = () => {
     switch (activeTab) {
-      case 'overview':
+      case "overview":
         return (
           <Overview
             hasActiveCase
-            onStartInvestigation={() => {}}
+            onStartInvestigation={() => onNavigate?.("new-investigation")}
+            onOpenWorkspace={() => setActiveTab("graph")}
+            onNavigate={(id) => {
+              setActiveTab(id);
+              onNavigate?.(id);
+            }}
             summary={data.summary}
             risk={data.risk}
             recentTransactions={data.transactions?.slice(0, 5)}
             aiSummary={data.aiResponse?.answer}
+            health={data.health}
+            evidenceCount={data.evidence?.length}
+            alerts={data.alerts}
+            chain={data.chain}
+            caseStatus={data.caseStatus}
           />
         );
-      case 'transactions':
+      case "transactions":
         return (
           <Transactions
             transactions={data.transactions || []}
-            onSelectTransaction={() => {}}
+            onSelectTransaction={() => onNavigate?.("graph")}
           />
         );
-      case 'risk':
+      case "risk":
         return (
           <RiskAndFraud
             score={data.risk?.overall_score || 0}
-            level={data.risk?.risk_level || 'UNKNOWN'}
+            level={data.risk?.risk_level || "UNKNOWN"}
             indicators={data.risk?.indicators || []}
+            alerts={data.alerts || []}
+            advanced={data.advancedIndicators}
+            attributions={data.attributions || []}
+            chain={data.chain}
           />
         );
-      case 'attribution':
+      case "attribution":
+        return <Attribution candidates={data.attributions || []} />;
+      case "evidence":
         return (
-          <Attribution candidates={data.attributions || []} />
+          <Evidence
+            items={data.evidence || []}
+            transactions={data.transactions || []}
+          />
         );
-      case 'ai':
+      case "ai":
         return (
           <AIInvestigation
-            interpretation={
-              data.aiResponse?.answer ||
-              'AI analysis not yet available. Processing investigation data...'
-            }
-            findings={
-              data.risk?.findings?.map((f: any) => ({
-                claim: f.type,
-                confidence: f.confidence || 0.75,
-                evidence_ref: f.transaction_refs?.[0] || 'N/A',
-              })) || []
-            }
-            explanation={data.risk?.explanations?.[0]}
-            isLoading={false}
+            caseId={caseId}
+            response={data.aiResponse}
+            health={data.health}
+            onAsk={onAskAi}
+            onAction={onAiAction}
           />
         );
-      case 'timeline':
+      case "timeline":
         return (
           <Timeline
-            events={[
-              {
-                id: '1',
-                timestamp: new Date(Date.now() - 3600000).toISOString(),
-                event: 'Investigation started',
-                status: 'complete',
-              },
-              {
-                id: '2',
-                timestamp: new Date(Date.now() - 2400000).toISOString(),
-                event: 'Blockchain data retrieved',
-                status: 'complete',
-              },
-              {
-                id: '3',
-                timestamp: new Date(Date.now() - 1800000).toISOString(),
-                event: 'Transactions analyzed',
-                status: 'complete',
-              },
-              {
-                id: '4',
-                timestamp: new Date(Date.now() - 900000).toISOString(),
-                event: 'Fund flow traced',
-                status: 'complete',
-              },
-              {
-                id: '5',
-                timestamp: new Date().toISOString(),
-                event: 'Risk assessment calculated',
-                status: 'active',
-                details: 'Computing risk score...',
-              },
-            ]}
-          />
-        );
-      case 'fund-flow':
-        return (
-          <FundFlow
-            paths={data.paths || []}
+            transactions={data.transactions || []}
             risk={data.risk}
           />
         );
-      case 'graph':
+      case "fund-flow":
+        return (
+          <FundFlow
+            paths={data.paths || []}
+            transactions={data.transactions || []}
+            risk={data.risk}
+            seedWallet={walletAddress}
+          />
+        );
+      case "graph":
         return (
           <InvestigationGraph
             graph={data.graph}
             attributions={data.attributions || []}
             risk={data.risk}
+            seedWallet={walletAddress}
+            wallets={data.wallets || []}
+            loading={data.loading}
+            error={data.error}
           />
         );
-      case 'report':
+      case "report":
         return (
           <InvestigationReport
             caseId={caseId}
             walletAddress={walletAddress}
+            chain={data.chain}
             summary={data.summary}
             risk={data.risk}
             attributions={data.attributions || []}
             recentTransactions={data.transactions?.slice(0, 5) || []}
+            evidence={data.evidence || []}
             aiSummary={data.aiResponse?.answer}
+            aiStatus={data.aiResponse?.provider_status}
+            realMode={Boolean(data.health?.real_mode)}
+            onExport={onExportReport}
           />
         );
       default:
@@ -167,29 +199,34 @@ export const InvestigationWorkspace: React.FC<InvestigationWorkspaceProps> = ({
 
   return (
     <div className="workspace">
-      {/* Side panel - Case Summary */}
       <div
-        className={`workspace__sidebar ${caseSummaryOpen ? 'workspace__sidebar--open' : ''}`}
+        className={`workspace__sidebar ${caseSummaryOpen ? "workspace__sidebar--open" : ""}`}
       >
         <CaseSummary
           caseId={caseId}
           walletAddress={walletAddress}
           risk={data.risk?.overall_score || 0}
-          status="ANALYZING"
+          status={
+            data.caseStatus?.current_stage ||
+            (data.health?.real_mode ? "REAL" : "DEMO")
+          }
           stats={{
             transactionsAnalyzed: data.transactions?.length || 0,
-            connectedWallets: data.graph?.nodes?.length || 0,
-            suspiciousEntities: data.attributions?.length || 0,
-            potentialVASPs: 3,
-            evidenceItems: 12,
-            progress: 85,
+            connectedWallets: data.graph?.nodes?.length || data.wallets?.length || 0,
+            suspiciousEntities: data.summary?.suspiciousEntities || 0,
+            potentialVASPs: data.summary?.potentialVASPs || 0,
+            evidenceItems: data.evidence?.length || 0,
+            progress: data.caseStatus?.progress ?? 0,
           }}
         />
+        {onRefresh && (
+          <button className="workspace__tab" onClick={onRefresh}>
+            Refresh case
+          </button>
+        )}
       </div>
 
-      {/* Main content area */}
       <div className="workspace__main">
-        {/* Tabs */}
         <div className="workspace__tabs" role="tablist" aria-label="Investigation tabs">
           {tabs.map((tab) => (
             <button
@@ -199,7 +236,7 @@ export const InvestigationWorkspace: React.FC<InvestigationWorkspaceProps> = ({
               aria-controls={`tabpanel-${tab.id}`}
               id={`tab-${tab.id}`}
               className={`workspace__tab ${
-                activeTab === tab.id ? 'workspace__tab--active' : ''
+                activeTab === tab.id ? "workspace__tab--active" : ""
               }`}
               onClick={() => {
                 setActiveTab(tab.id);
@@ -210,10 +247,8 @@ export const InvestigationWorkspace: React.FC<InvestigationWorkspaceProps> = ({
             </button>
           ))}
         </div>
-
-        {/* Tab content */}
-        <div 
-          className="workspace__content" 
+        <div
+          className="workspace__content"
           role="tabpanel"
           id={`tabpanel-${activeTab}`}
           aria-labelledby={`tab-${activeTab}`}
@@ -222,7 +257,6 @@ export const InvestigationWorkspace: React.FC<InvestigationWorkspaceProps> = ({
         </div>
       </div>
 
-      {/* Mobile case summary toggle */}
       <button
         className="workspace__sidebar-toggle"
         onClick={() => setCaseSummaryOpen(!caseSummaryOpen)}

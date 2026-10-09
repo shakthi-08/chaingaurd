@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from app.database import SessionLocal, init_db
+from app.config import is_real_mode_enabled
+from app.database import SessionLocal
 from app.models import Case, Transaction, Wallet
 from app.services.demo_case import DEMO_CASE
 from app.services.demo_provider import DemoBlockchainProvider
@@ -11,7 +12,9 @@ from app.services.transaction_normalizer import normalize_transaction_record
 
 def seed_demo_case(session_factory=SessionLocal) -> bool:
     """Create the synthetic demo case once; never alter an existing case."""
-    init_db()
+    if is_real_mode_enabled():
+        return False
+
     with session_factory() as session:
         case_id = DEMO_CASE["case_id"]
         if session.query(Case).filter(Case.case_id == case_id).first() is not None:
@@ -27,15 +30,21 @@ def seed_demo_case(session_factory=SessionLocal) -> bool:
         session.flush()
 
         records = DemoBlockchainProvider.DEMO_TRANSACTIONS
+        seed_address = str(DEMO_CASE["wallets"][0]["wallet_address"]).strip().lower()
         addresses = sorted({record["from"] for record in records} | {record["to"] for record in records})
         for address in addresses:
+            labels = ["DEMO/SAMPLE", "synthetic-demo-wallet"]
+            if address.lower() == seed_address:
+                labels.extend(["seed", "reported"])
+            else:
+                labels.append("discovered")
             session.add(
                 Wallet(
                     address=address,
                     chain="ethereum",
                     first_seen=case.created_at,
                     last_seen=case.created_at,
-                    labels=["DEMO/SAMPLE", "synthetic-demo-wallet"],
+                    labels=labels,
                     case=case,
                 )
             )

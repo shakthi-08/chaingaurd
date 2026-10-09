@@ -5,11 +5,15 @@ from datetime import datetime, timezone
 from decimal import Decimal, InvalidOperation
 from typing import Any, Iterable
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.database import SessionLocal, init_db
+from app.config import is_real_mode_enabled
+from app.database import SessionLocal
 from app.models import Case, Transaction
 from app.services.demo_bridge_dataset import DEMO_BRIDGE_EVENTS
+from app.services.protocol_detection_service import ProtocolDetectionService
+from app.services.protocol_registry import UNCONFIRMED_DESTINATION
 
 
 @dataclass(frozen=True)
@@ -42,6 +46,9 @@ class CrossChainMovement:
             "reasons": self.reasons,
             "evidence_refs": self.evidence_refs,
             "source": "DEMO/SAMPLE synthetic correlation; not a real bridge finding",
+            "bridge_detected": True,
+            "destination_confirmed": True,
+            "note": None,
         }
 
 
@@ -51,7 +58,6 @@ class CrossChainService:
 
     def __init__(self, session_factory=SessionLocal) -> None:
         self.session_factory = session_factory
-        init_db()
 
     @staticmethod
     def _decimal(value: str) -> Decimal:
@@ -102,6 +108,9 @@ class CrossChainService:
 
     @classmethod
     def correlate_transactions(cls, transactions: Iterable[Transaction]) -> list[dict[str, Any]]:
+        if is_real_mode_enabled():
+            return []
+
         by_hash = {transaction.tx_hash: transaction for transaction in transactions}
         movements = []
         for event in DEMO_BRIDGE_EVENTS:
@@ -119,8 +128,44 @@ class CrossChainService:
             case = session.query(Case).filter(Case.case_id == case_id).first()
             if case is None:
                 raise ValueError("Case not found.")
-            addresses = [wallet.address for wallet in case.wallets]
+            addresses = {wallet.address.lower() for wallet in case.wallets}
             transactions = session.query(Transaction).filter(
-                (Transaction.from_address.in_(addresses)) | (Transaction.to_address.in_(addresses))
+                (func.lower(Transaction.from_address).in_(addresses)) | (func.lower(Transaction.to_address).in_(addresses))
             ).all() if addresses else []
-            return self.correlate_transactions(transactions)
+            session.expunge_all()
+
+        movements: list[dict[str, Any]] = []
+        if not is_real_mode_enabled():
+            movements.extend(self.correlate_transactions(transactions))
+
+        try:
+            detections = ProtocolDetectionService.detect_transactions(transactions)
+        except Exception:
+            detections = []
+        for item in detections:
+            if item.get("category") != "bridge":
+                continue
+            movements.append(
+                {
+                    "bridge_detected": True,
+                    "source_chain": item.get("chain"),
+                    "source_transaction": item.get("tx_hash"),
+                    "source_wallet": item.get("wallet"),
+                    "destination_chain": item.get("destination_chain") or "unconfirmed",
+                    "destination_transaction": item.get("destination_transaction") or "",
+                    "destination_wallet": item.get("destination_wallet") or "",
+                    "bridge_service": item.get("protocol"),
+                    "timestamp": item.get("timestamp"),
+                    "transferred_value": "",
+                    "confidence": round(float(item.get("confidence") or 0.8) * 100, 2),
+                    "reasons": [
+                        f"known bridge contract {item.get('counterparty')}",
+                        item.get("note") or UNCONFIRMED_DESTINATION,
+                    ],
+                    "evidence_refs": item.get("evidence_refs") or [],
+                    "source": item.get("source") or "public_reference_registry",
+                    "destination_confirmed": False,
+                    "note": item.get("note") or UNCONFIRMED_DESTINATION,
+                }
+            )
+        return movements

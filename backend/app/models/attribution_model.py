@@ -15,6 +15,12 @@ class Attribution(Base):
     confidence: Mapped[float] = mapped_column(Float, nullable=False)
     reasons: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
     source: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    attribution_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    status: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    confidence_factors: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
+    evidence_refs: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    conflicting_evidence: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    provenance: Mapped[str | None] = mapped_column(String(128), nullable=True)
 
     wallet: Mapped["Wallet"] = relationship(back_populates="attributions")
     entity: Mapped["Entity"] = relationship(back_populates="attributions")

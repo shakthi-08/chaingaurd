@@ -13,10 +13,17 @@
   overflow: hidden;
 }
 
-.layout__content {
-  flex: 1;
-  overflow-y: auto;
-  background-color: var(--bg-base);
+.layout__error {
+  padding: 8px 16px;
+  background: rgba(240, 71, 62, 0.12);
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.layout__loading {
+  padding: 8px 16px;
+  color: var(--text-secondary);
+  font-size: 13px;
 }
 
 /* Sidebar Styles */

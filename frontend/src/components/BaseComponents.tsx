@@ -162,23 +162,25 @@ interface ConfidenceProps {
 
 export const ConfidenceBadge: React.FC<ConfidenceProps> = ({
   confidence,
-  className = '',
+  className = "",
 }) => {
-  const getLabel = (conf: number) => {
-    if (conf < 0.4) return 'Low Confidence';
-    if (conf < 0.7) return 'Moderate Confidence';
-    return 'High Confidence';
+  const pct = Math.max(0, Math.min(100, Math.round(confidence)));
+  const getLabel = (value: number) => {
+    if (value >= 85) return "Strong";
+    if (value >= 60) return "Probable";
+    if (value >= 25) return "Possible";
+    return "Unknown";
   };
-
-  const getVariant = (conf: number) => {
-    if (conf < 0.4) return 'warning';
-    if (conf < 0.7) return 'neutral';
-    return 'success';
+  const getVariant = (value: number) => {
+    if (value >= 85) return "success";
+    if (value >= 60) return "primary";
+    if (value >= 25) return "warning";
+    return "neutral";
   };
 
   return (
-    <Badge variant={getVariant(confidence)} className={className}>
-      {Math.round(confidence * 100)}% {getLabel(confidence)}
+    <Badge variant={getVariant(pct)} className={className}>
+      {pct}% {getLabel(pct)}
     </Badge>
   );
 };

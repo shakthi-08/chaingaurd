@@ -58,6 +58,7 @@ describe("dashboard summary", () => {
           explanation: "",
         },
       ],
+      3,
     );
     expect(summary).toEqual({
       transactions: 1,
@@ -66,6 +67,9 @@ describe("dashboard summary", () => {
       importantPaths: 0,
       score: 30,
       attribution: 84,
+      potentialVASPs: 1,
+      suspiciousEntities: 1,
+      evidenceItems: 3,
     });
   });
 

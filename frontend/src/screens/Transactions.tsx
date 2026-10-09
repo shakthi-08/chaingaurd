@@ -71,13 +71,42 @@ export const Transactions: React.FC<TransactionsProps> = ({
           </select>
         </div>
 
-        <Button variant="secondary" size="sm">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => document.querySelector<HTMLInputElement>(".transactions__search input")?.focus()}
+        >
           <Filter size={16} />
-          More Filters
+          Search
         </Button>
 
-        <Button variant="ghost" size="sm">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            const rows = [
+              ["tx_hash", "from", "to", "value", "token", "timestamp"],
+              ...filteredTransactions.map((tx) => [
+                tx.tx_hash,
+                tx.from,
+                tx.to,
+                tx.value,
+                tx.token || "",
+                tx.timestamp,
+              ]),
+            ];
+            const csv = rows.map((row) => row.join(",")).join("\n");
+            const blob = new Blob([csv], { type: "text/csv" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = "case-transactions.csv";
+            link.click();
+            URL.revokeObjectURL(url);
+          }}
+        >
           <Download size={16} />
+          Export CSV
         </Button>
       </div>
 

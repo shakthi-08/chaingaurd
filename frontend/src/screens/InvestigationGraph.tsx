@@ -1,193 +1,280 @@
-import React, { useMemo, useState, useCallback } from 'react';
+import React, { useCallback, useMemo, useState } from "react";
 import ReactFlow, {
-  Node,
-  Edge,
-  Controls,
   Background,
-  useNodesState,
-  useEdgesState,
+  Controls,
+  MiniMap,
   MarkerType,
-} from 'reactflow';
-import { Card, Badge, Button, Drawer } from '../components/BaseComponents';
-import { Network, Filter, ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
-import './InvestigationGraph.css';
-
-interface GraphNode {
-  id: string;
-  type?: string;
-}
-
-interface GraphEdge {
-  id: string;
-  source: string;
-  target: string;
-  tx_ref: string;
-  value: string;
-  timestamp: string;
-  token?: string;
-}
+  ReactFlowProvider,
+  type Edge,
+  type Node,
+  useReactFlow,
+} from "reactflow";
+import { Badge, Button, Card, Drawer } from "../components/BaseComponents";
+import {
+  attributionStrength,
+  confidencePercent,
+  formatCryptoValue,
+  shortHash,
+  type Attribution,
+  type CaseWallet,
+  type Graph,
+  type RiskAssessment,
+} from "../api";
+import { Network } from "lucide-react";
+import "./InvestigationGraph.css";
 
 interface InvestigationGraphProps {
-  graph?: {
-    nodes: GraphNode[];
-    edges: GraphEdge[];
-    transactions?: GraphEdge[];
-  };
-  attributions?: Array<{
-    wallet: string;
-    entity: string;
-    entity_type: string;
-    confidence: number;
-  }>;
-  risk?: {
-    overall_score: number;
-    risk_level: string;
-  };
+  graph?: Graph;
+  attributions?: Attribution[];
+  risk?: RiskAssessment;
+  seedWallet?: string;
+  wallets?: CaseWallet[];
+  loading?: boolean;
+  error?: string | null;
 }
 
-const getNodeColor = (nodeType?: string): string => {
-  switch (nodeType?.toLowerCase()) {
-    case 'suspect':
-      return 'var(--danger)';
-    case 'high-risk':
-      return 'var(--warning)';
-    case 'exchange':
-    case 'vasp':
-      return 'var(--accent-cyan)';
-    case 'normal':
-    default:
-      return 'var(--accent-primary)';
+const hopDistance = (
+  seed: string,
+  edges: { source: string; target: string }[],
+) => {
+  const distance = new Map<string, number>();
+  distance.set(seed.toLowerCase(), 0);
+  const queue = [seed.toLowerCase()];
+  const adjacency = new Map<string, string[]>();
+  for (const edge of edges) {
+    const source = edge.source.toLowerCase();
+    const target = edge.target.toLowerCase();
+    adjacency.set(source, [...(adjacency.get(source) || []), target]);
+    adjacency.set(target, [...(adjacency.get(target) || []), source]);
   }
+  while (queue.length) {
+    const current = queue.shift()!;
+    for (const next of adjacency.get(current) || []) {
+      if (distance.has(next)) continue;
+      distance.set(next, (distance.get(current) || 0) + 1);
+      queue.push(next);
+    }
+  }
+  return distance;
 };
 
-const getNodeLabel = (nodeId: string, attribution?: any): string => {
-  if (attribution?.entity) {
-    return attribution.entity;
+const layoutNodes = (
+  nodeIds: string[],
+  edges: { source: string; target: string }[],
+  seed: string,
+) => {
+  const distances = hopDistance(seed || nodeIds[0] || "", edges);
+  const layers = new Map<number, string[]>();
+  for (const id of nodeIds) {
+    const layer = distances.get(id.toLowerCase()) ?? 99;
+    layers.set(layer, [...(layers.get(layer) || []), id]);
   }
-  return `${nodeId.slice(0, 8)}...${nodeId.slice(-6)}`;
+  const positions = new Map<string, { x: number; y: number }>();
+  const sortedLayers = [...layers.keys()].sort((a, b) => a - b);
+  sortedLayers.forEach((layer, layerIndex) => {
+    const ids = layers.get(layer) || [];
+    ids.forEach((id, index) => {
+      const offset = ((ids.length - 1) / 2) * 110;
+      positions.set(id, {
+        x: 80 + layerIndex * 280,
+        y: 80 + index * 110 - offset + 200,
+      });
+    });
+  });
+  return positions;
 };
 
-export const InvestigationGraph: React.FC<InvestigationGraphProps> = ({
+export const InvestigationGraph: React.FC<InvestigationGraphProps> = (props) => (
+  <ReactFlowProvider>
+    <InvestigationGraphCanvas {...props} />
+  </ReactFlowProvider>
+);
+
+const InvestigationGraphCanvas: React.FC<InvestigationGraphProps> = ({
   graph,
   attributions = [],
   risk,
+  seedWallet = "",
+  wallets = [],
+  loading,
+  error,
 }) => {
+  const { fitView } = useReactFlow();
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
-  const [filterType, setFilterType] = useState<string>('all');
-  const [showLabels, setShowLabels] = useState(true);
+  const [selectedEdge, setSelectedEdge] = useState<string | null>(null);
+  const [filterType, setFilterType] = useState("all");
 
-  // Build ReactFlow nodes and edges from graph data
-  const { nodes: flowNodes, edges: flowEdges } = useMemo(() => {
-    if (!graph?.nodes || graph.nodes.length === 0) {
-      return { nodes: [], edges: [] };
+  const seed =
+    wallets.find((item) => item.is_seed)?.address || seedWallet.toLowerCase();
+  const attributionMap = useMemo(
+    () => new Map(attributions.map((item) => [item.wallet.toLowerCase(), item])),
+    [attributions],
+  );
+  const riskyWallets = useMemo(() => {
+    const set = new Set<string>();
+    for (const indicator of risk?.indicators || []) {
+      for (const address of indicator.wallet_addresses || []) {
+        set.add(address.toLowerCase());
+      }
     }
+    return set;
+  }, [risk]);
 
-    const attributionMap = new Map(
-      attributions.map((attr) => [attr.wallet, attr])
-    );
-
-    // Create nodes
-    const nodes: Node[] = graph.nodes.map((nodeData, index) => {
-      const attribution = attributionMap.get(nodeData.id);
-      const nodeType = nodeData.type || 'unknown';
-      const nodeColor = getNodeColor(nodeType);
-      const label = getNodeLabel(nodeData.id, attribution);
-
-      return {
-        id: nodeData.id,
-        data: {
-          label: (
-            <div className="graph-node">
-              {showLabels ? (
-                <div className="graph-node__label">{label}</div>
-              ) : (
-                <div className="graph-node__icon">●</div>
-              )}
-            </div>
-          ),
-        },
-        position: {
-          x: Math.cos((index / graph.nodes.length) * Math.PI * 2) * 300,
-          y: Math.sin((index / graph.nodes.length) * Math.PI * 2) * 300,
-        },
-        style: {
-          background: nodeColor,
-          border:
-            selectedNode === nodeData.id
-              ? `3px solid var(--accent-primary)`
-              : `2px solid ${nodeColor}`,
-          borderRadius: '6px',
-          padding: '6px 10px',
-          fontSize: '11px',
-          color: nodeType === 'vasp' || nodeType === 'exchange' ? '#000' : 'var(--text-primary)',
-          fontWeight: 500,
-          minWidth: '60px',
-          textAlign: 'center',
-          cursor: 'pointer',
-        },
-      };
-    });
-
-    // Create edges
-    const edges: Edge[] = (graph.edges || []).map((edgeData) => {
-      // Filter edges based on selected filter
+  const classify = useCallback(
+    (address: string) => {
+      const attr = attributionMap.get(address.toLowerCase());
+      if (address.toLowerCase() === seed.toLowerCase()) return "seed";
+      const graphType = graph?.nodes?.find((item) => item.id.toLowerCase() === address.toLowerCase())?.type;
+      if (graphType === "bridge") return "bridge";
+      if (graphType === "mixer") return "mixer";
+      if (graphType === "defi") return "defi";
       if (
-        filterType !== 'all' &&
-        graph.nodes.find((n) => n.id === edgeData.source)?.type !== filterType &&
-        graph.nodes.find((n) => n.id === edgeData.target)?.type !== filterType
+        attr &&
+        ["vasp", "exchange", "custodial_service"].includes(
+          String(attr.entity_type || "").toLowerCase(),
+        )
       ) {
-        return null as any;
+        return "vasp";
       }
-
-      const isSelected =
-        selectedNode === edgeData.source || selectedNode === edgeData.target;
-
-      // Scale edge width by value
-      let strokeWidth = 1;
-      try {
-        const valueNum = parseFloat(edgeData.value);
-        if (valueNum > 10000) strokeWidth = 3;
-        else if (valueNum > 1000) strokeWidth = 2;
-      } catch {
-        // keep default
+      if (riskyWallets.has(address.toLowerCase()) || (risk?.overall_score || 0) >= 70) {
+        if (riskyWallets.has(address.toLowerCase())) return "high-risk";
       }
+      if (attr) return "entity";
+      return "intermediary";
+    },
+    [attributionMap, graph?.nodes, risk?.overall_score, riskyWallets, seed],
+  );
 
-      return {
-        id: edgeData.id,
-        source: edgeData.source,
-        target: edgeData.target,
-        markerEnd: { type: MarkerType.ArrowClosed },
-        style: {
-          stroke: isSelected ? 'var(--accent-primary)' : 'var(--border-strong)',
-          strokeWidth,
-          opacity: isSelected ? 1 : 0.3,
-        },
-        animated: isSelected,
-        label: isSelected ? `${edgeData.value} ${edgeData.token || ''}` : undefined,
-      };
-    }).filter(Boolean);
+  const colorFor = (kind: string) => {
+    switch (kind) {
+      case "seed":
+        return "#7c5cff";
+      case "vasp":
+        return "#2ec4b6";
+      case "bridge":
+        return "#3d8bfd";
+      case "defi":
+        return "#8b5cf6";
+      case "mixer":
+        return "#fb7185";
+      case "high-risk":
+        return "#f0473e";
+      case "entity":
+        return "#f0b429";
+      default:
+        return "#5b8def";
+    }
+  };
 
-    return { nodes, edges };
-  }, [graph, attributions, selectedNode, filterType, showLabels]);
+  const distances = useMemo(
+    () => hopDistance(seed, graph?.edges || []),
+    [graph?.edges, seed],
+  );
 
-  const handleNodeClick = useCallback((nodeId: string) => {
-    setSelectedNode(selectedNode === nodeId ? null : nodeId);
-  }, [selectedNode]);
+  const { nodes, edges } = useMemo(() => {
+    if (!graph?.nodes?.length) return { nodes: [] as Node[], edges: [] as Edge[] };
+    const positions = layoutNodes(
+      graph.nodes.map((item) => item.id),
+      graph.edges || [],
+      seed,
+    );
+    const flowNodes: Node[] = graph.nodes
+      .filter((item) => {
+        const kind = classify(item.id);
+        return filterType === "all" || kind === filterType;
+      })
+      .map((item) => {
+        const kind = classify(item.id);
+        const attr = attributionMap.get(item.id.toLowerCase());
+        const label = attr?.entity
+          ? attr.entity
+          : `${item.id.slice(0, 6)}…${item.id.slice(-4)}`;
+        return {
+          id: item.id,
+          data: { label: `${kind === "seed" ? "SEED " : ""}${label}` },
+          position: positions.get(item.id) || { x: 0, y: 0 },
+          style: {
+            background: colorFor(kind),
+            color: "#0b1020",
+            border: selectedNode === item.id ? "3px solid #fff" : "2px solid transparent",
+            borderRadius: 8,
+            padding: 8,
+            fontSize: 11,
+            fontWeight: 700,
+            minWidth: 120,
+            textAlign: "center",
+          },
+        };
+      });
 
-  const selectedNodeData = useMemo(() => {
-    if (!selectedNode) return null;
-    const attribution = attributions.find((a) => a.wallet === selectedNode);
-    const nodeInfo = graph?.nodes.find((n) => n.id === selectedNode);
-    return { attribution, nodeInfo };
-  }, [selectedNode, attributions, graph?.nodes]);
+    const visible = new Set(flowNodes.map((item) => item.id));
+    const flowEdges: Edge[] = (graph.edges || [])
+      .filter((item) => visible.has(item.source) && visible.has(item.target))
+      .map((item) => {
+          const hop = distances.get(item.target.toLowerCase());
+          const relation = item.relation_type ? ` · ${item.relation_type}` : "";
+          const label = `${formatCryptoValue(item.value, item.token)} · ${shortHash(item.tx_ref, 4)}${hop != null ? ` · hop ${hop}` : ""}${relation}`;
+        return {
+          id: item.id,
+          source: item.source,
+          target: item.target,
+          label,
+          markerEnd: { type: MarkerType.ArrowClosed, color: "#9aa4b2" },
+          style: {
+            stroke: selectedEdge === item.id ? "#7c5cff" : "#9aa4b2",
+            strokeWidth: selectedEdge === item.id ? 3 : 1.5,
+          },
+        };
+      });
+    return { nodes: flowNodes, edges: flowEdges };
+  }, [
+    attributionMap,
+    classify,
+    distances,
+    filterType,
+    graph,
+    seed,
+    selectedEdge,
+    selectedNode,
+  ]);
 
-  if (!graph?.nodes || graph.nodes.length === 0) {
+  const selectedNodeData = selectedNode
+    ? {
+        address: selectedNode,
+        kind: classify(selectedNode),
+        attribution: attributionMap.get(selectedNode.toLowerCase()),
+        hop: distances.get(selectedNode.toLowerCase()),
+        wallet: wallets.find(
+          (item) => item.address.toLowerCase() === selectedNode.toLowerCase(),
+        ),
+      }
+    : null;
+  const selectedEdgeData = selectedEdge
+    ? (graph?.edges || []).find((item) => item.id === selectedEdge)
+    : null;
+
+  if (loading && !graph?.nodes?.length) {
     return (
       <div className="investigation-graph">
         <div className="investigation-graph__empty">
           <Network size={48} />
-          <h3>No graph data available</h3>
-          <p>Blockchain network analysis will appear here</p>
+          <h3>Building investigation graph</h3>
+          <p>Loading wallets and transactions for this case.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!graph?.nodes?.length) {
+    return (
+      <div className="investigation-graph">
+        <div className="investigation-graph__empty">
+          <Network size={48} />
+          <h3>No graph data yet</h3>
+          <p>
+            {error ||
+              "Ingest a wallet to generate the investigation graph from actual case transactions."}
+          </p>
         </div>
       </div>
     );
@@ -197,130 +284,122 @@ export const InvestigationGraph: React.FC<InvestigationGraphProps> = ({
     <div className="investigation-graph">
       <div className="investigation-graph__toolbar">
         <div className="investigation-graph__toolbar-group">
-          <label className="investigation-graph__filter-label">
-            <Filter size={14} />
-            Filter by Type:
-          </label>
+          <label className="investigation-graph__filter-label">Filter</label>
           <select
             value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
+            onChange={(event) => setFilterType(event.target.value)}
             className="investigation-graph__filter-select"
           >
-            <option value="all">All Nodes</option>
-            <option value="suspect">Suspect</option>
-            <option value="high-risk">High Risk</option>
-            <option value="exchange">Exchange</option>
-            <option value="vasp">VASP</option>
-            <option value="normal">Normal</option>
+            <option value="all">All nodes</option>
+            <option value="seed">Reported wallet</option>
+            <option value="intermediary">Intermediaries</option>
+            <option value="vasp">VASP / exchange</option>
+            <option value="bridge">Bridge</option>
+            <option value="defi">DeFi protocol</option>
+            <option value="mixer">Mixer</option>
+            <option value="high-risk">High risk</option>
+            <option value="entity">Attributed entity</option>
           </select>
         </div>
-
-        <div className="investigation-graph__toolbar-group">
-          <Button
-            variant={showLabels ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => setShowLabels(!showLabels)}
-          >
-            {showLabels ? 'Hide' : 'Show'} Labels
-          </Button>
-        </div>
+        <Button variant="secondary" size="sm" onClick={() => fitView({ padding: 0.2 })}>
+          Fit / reset
+        </Button>
       </div>
 
       <Card className="investigation-graph__canvas">
         <ReactFlow
-          nodes={flowNodes}
-          edges={flowEdges}
-          onNodeClick={(event, node) => handleNodeClick(node.id)}
+          nodes={nodes}
+          edges={edges}
+          fitView
+          minZoom={0.2}
+          maxZoom={2}
+          onNodeClick={(_, node) => {
+            setSelectedEdge(null);
+            setSelectedNode(node.id);
+          }}
+          onEdgeClick={(_, edge) => {
+            setSelectedNode(null);
+            setSelectedEdge(edge.id);
+          }}
         >
           <Background color="var(--border-subtle)" gap={16} />
           <Controls />
+          <MiniMap pannable zoomable />
         </ReactFlow>
       </Card>
 
-      {/* Legend */}
       <div className="investigation-graph__legend">
         <div className="investigation-graph__legend-row">
           <div className="investigation-graph__legend-item">
-            <div
-              className="investigation-graph__legend-node"
-              style={{ background: 'var(--danger)' }}
-            />
-            <span>Suspect</span>
+            <div className="investigation-graph__legend-node" style={{ background: colorFor("seed") }} />
+            <span>Reported / seed wallet</span>
           </div>
           <div className="investigation-graph__legend-item">
-            <div
-              className="investigation-graph__legend-node"
-              style={{ background: 'var(--warning)' }}
-            />
-            <span>High Risk</span>
+            <div className="investigation-graph__legend-node" style={{ background: colorFor("intermediary") }} />
+            <span>Intermediary</span>
           </div>
           <div className="investigation-graph__legend-item">
-            <div
-              className="investigation-graph__legend-node"
-              style={{ background: 'var(--accent-cyan)' }}
-            />
-            <span>Exchange/VASP</span>
+            <div className="investigation-graph__legend-node" style={{ background: colorFor("vasp") }} />
+            <span>VASP / exchange</span>
           </div>
           <div className="investigation-graph__legend-item">
-            <div
-              className="investigation-graph__legend-node"
-              style={{ background: 'var(--accent-primary)' }}
-            />
-            <span>Normal</span>
+            <div className="investigation-graph__legend-node" style={{ background: colorFor("high-risk") }} />
+            <span>High-risk wallet</span>
           </div>
         </div>
       </div>
 
-      {/* Detail drawer */}
       <Drawer
-        isOpen={selectedNode !== null}
-        onClose={() => setSelectedNode(null)}
-        title="Node Details"
+        isOpen={Boolean(selectedNode || selectedEdge)}
+        onClose={() => {
+          setSelectedNode(null);
+          setSelectedEdge(null);
+        }}
+        title={selectedEdge ? "Transaction" : "Wallet"}
       >
         {selectedNodeData && (
           <div className="investigation-graph__detail">
             <div className="investigation-graph__detail-section">
-              <h4>Wallet Address</h4>
-              <code className="investigation-graph__detail-code">
-                {selectedNode}
-              </code>
+              <h4>Address</h4>
+              <code className="investigation-graph__detail-code">{selectedNodeData.address}</code>
             </div>
-
-            {selectedNodeData.attribution && (
-              <>
-                <div className="investigation-graph__detail-section">
-                  <h4>Attribution</h4>
-                  <p className="investigation-graph__detail-entity">
-                    {selectedNodeData.attribution.entity}
-                  </p>
-                  <div className="investigation-graph__detail-meta">
-                    <span>Type: {selectedNodeData.attribution.entity_type}</span>
-                    <span>
-                      Confidence:{' '}
-                      {(selectedNodeData.attribution.confidence * 100).toFixed(0)}%
-                    </span>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {selectedNodeData.nodeInfo?.type && (
+            <div className="investigation-graph__detail-section">
+              <h4>Role</h4>
+              <Badge variant={selectedNodeData.kind === "high-risk" ? "danger" : "primary"}>
+                {selectedNodeData.kind}
+              </Badge>
+              {selectedNodeData.hop != null && <p>Hop from reported wallet: {selectedNodeData.hop}</p>}
+              {selectedNodeData.wallet?.chain && <p>Chain: {selectedNodeData.wallet.chain}</p>}
+            </div>
+            {selectedNodeData.attribution ? (
               <div className="investigation-graph__detail-section">
-                <h4>Classification</h4>
-                <Badge variant={selectedNodeData.nodeInfo.type === 'suspect' ? 'danger' : 'warning'}>
-                  {selectedNodeData.nodeInfo.type.toUpperCase()}
-                </Badge>
+                <h4>Attribution</h4>
+                <p>{selectedNodeData.attribution.entity}</p>
+                <p>
+                  {confidencePercent(selectedNodeData.attribution.confidence)}% ·{" "}
+                  {attributionStrength(
+                    selectedNodeData.attribution.confidence,
+                    selectedNodeData.attribution.status,
+                  )}
+                </p>
+                <p>{selectedNodeData.attribution.source}</p>
               </div>
+            ) : (
+              <p>No reliable attribution for this wallet.</p>
             )}
-
-            <div className="investigation-graph__detail-actions">
-              <Button variant="secondary" size="sm">
-                View Transactions
-              </Button>
-              <Button variant="secondary" size="sm">
-                View Timeline
-              </Button>
+          </div>
+        )}
+        {selectedEdgeData && (
+          <div className="investigation-graph__detail">
+            <div className="investigation-graph__detail-section">
+              <h4>Hash</h4>
+              <code className="investigation-graph__detail-code">{selectedEdgeData.tx_ref}</code>
             </div>
+            <p>From: {selectedEdgeData.source}</p>
+            <p>To: {selectedEdgeData.target}</p>
+            <p>Amount: {formatCryptoValue(selectedEdgeData.value, selectedEdgeData.token)}</p>
+            <p>Time: {new Date(selectedEdgeData.timestamp).toLocaleString()}</p>
+            {selectedEdgeData.chain && <p>Chain: {selectedEdgeData.chain}</p>}
           </div>
         )}
       </Drawer>

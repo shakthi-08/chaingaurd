@@ -16,6 +16,12 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import './Layout.css';
+import {
+  backendHealthLabel,
+  liveEventsLabel,
+  type BackendHealthStatus,
+  type LiveEventsStatus,
+} from "../connectivity";
 
 interface NavItem {
   id: string;
@@ -58,7 +64,8 @@ interface SidebarProps {
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
   hasActiveCase?: boolean;
-  realtimeStatus?: "connecting" | "connected" | "disconnected" | "disabled";
+  backendHealthStatus?: BackendHealthStatus;
+  liveEventsStatus?: LiveEventsStatus;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -67,21 +74,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isCollapsed = false,
   onToggleCollapse,
   hasActiveCase = false,
-  realtimeStatus = "disconnected",
+  backendHealthStatus = "checking",
+  liveEventsStatus = "idle",
 }) => {
-  const getStatusColor = () => {
-    switch (realtimeStatus) {
-      case "connected":
-        return "var(--success)";
-      case "connecting":
-        return "var(--warning)";
-      case "disabled":
-        return "var(--text-secondary)";
-      default:
-        return "var(--danger)";
-    }
-  };
-
   return (
     <aside className={`sidebar ${isCollapsed ? 'sidebar--collapsed' : ''}`}>
       <div className="sidebar__header">
@@ -126,22 +121,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
       </nav>
 
       <div className="sidebar__footer">
-        <div className="sidebar__status">
-          <span
-            className="sidebar__status-dot"
-            style={{ backgroundColor: getStatusColor() }}
-          />
-          {!isCollapsed && (
-            <span className="sidebar__status-label">
-              {realtimeStatus === "connected"
-                ? "Live events"
-                : realtimeStatus === "connecting"
-                  ? "Connecting"
-                  : realtimeStatus === "disabled"
-                    ? "Events off"
-                    : "Offline"}
-            </span>
-          )}
+        <div className="sidebar__status-group">
+          <div className="sidebar__status">
+            <span
+              className="sidebar__status-dot"
+              style={{
+                backgroundColor:
+                  backendHealthStatus === "online"
+                    ? "var(--success)"
+                    : backendHealthStatus === "offline"
+                      ? "var(--danger)"
+                      : "var(--warning)",
+              }}
+            />
+            {!isCollapsed && (
+              <span className="sidebar__status-label">
+                {backendHealthLabel(backendHealthStatus)}
+              </span>
+            )}
+          </div>
+          <div className="sidebar__status">
+            <span
+              className="sidebar__status-dot"
+              style={{
+                backgroundColor:
+                  liveEventsStatus === "connected"
+                    ? "var(--success)"
+                    : liveEventsStatus === "connecting"
+                      ? "var(--warning)"
+                      : liveEventsStatus === "disconnected"
+                        ? "var(--danger)"
+                        : "var(--text-secondary)",
+              }}
+            />
+            {!isCollapsed && (
+              <span className="sidebar__status-label">
+                {liveEventsLabel(liveEventsStatus)}
+              </span>
+            )}
+          </div>
         </div>
         {onToggleCollapse && (
           <button
@@ -254,7 +272,8 @@ interface LayoutProps {
   walletAddress?: string;
   riskScore?: number;
   hasActiveCase?: boolean;
-  realtimeStatus?: "connecting" | "connected" | "disconnected" | "disabled";
+  backendHealthStatus?: BackendHealthStatus;
+  liveEventsStatus?: LiveEventsStatus;
   onRefresh?: () => void;
   loading?: boolean;
   error?: string | null;
@@ -270,7 +289,8 @@ export const Layout: React.FC<LayoutProps> = ({
   walletAddress,
   riskScore,
   hasActiveCase = false,
-  realtimeStatus = "disconnected",
+  backendHealthStatus = "checking",
+  liveEventsStatus = "idle",
   onRefresh,
   loading = false,
   error,
@@ -283,7 +303,8 @@ export const Layout: React.FC<LayoutProps> = ({
         isCollapsed={sidebarCollapsed}
         onToggleCollapse={onToggleSidebar}
         hasActiveCase={hasActiveCase}
-        realtimeStatus={realtimeStatus}
+        backendHealthStatus={backendHealthStatus}
+        liveEventsStatus={liveEventsStatus}
       />
       <div className="layout__main">
         <TopBar
@@ -291,11 +312,13 @@ export const Layout: React.FC<LayoutProps> = ({
           walletAddress={walletAddress}
           riskScore={riskScore}
           status={
-            realtimeStatus === "connected"
+            liveEventsStatus === "connected"
               ? "LIVE"
-              : realtimeStatus === "disabled"
+              : liveEventsStatus === "disabled"
                 ? "REAL / NO LIVE EVENTS"
-                : "ACTIVE"
+                : liveEventsStatus === "disconnected"
+                  ? "LIVE EVENTS DISCONNECTED"
+                  : "ACTIVE"
           }
           onRefresh={onRefresh}
           loading={loading}
